@@ -16,6 +16,6 @@ type Key struct {
 
 	// Relationships.
 	App          App              `gorm:"foreignKey:AppName;references:Name;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Category     Category         `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Category     *Category        `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Translations []KeyTranslation `gorm:"foreignKey:KeyID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
