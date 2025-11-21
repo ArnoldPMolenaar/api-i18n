@@ -123,7 +123,7 @@ func UpdateCategory(oldCategory models.Category, name string, disabledAt *time.T
 		oldCategory.DisabledAt = sql.NullTime{Valid: false}
 	}
 
-	if result := database.Pg.Save(oldCategory); result.Error != nil {
+	if result := database.Pg.Save(&oldCategory); result.Error != nil {
 		return nil, result.Error
 	}
 

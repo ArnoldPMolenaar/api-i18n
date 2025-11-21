@@ -2,8 +2,11 @@ package services
 
 import (
 	"api-i18n/main/src/database"
+	"api-i18n/main/src/dto/requests"
 	"api-i18n/main/src/dto/responses"
+	"api-i18n/main/src/enums"
 	"api-i18n/main/src/models"
+	"database/sql"
 
 	"github.com/ArnoldPMolenaar/api-utils/pagination"
 	"github.com/gofiber/fiber/v2"
@@ -99,13 +102,13 @@ func GetKeys(c *fiber.Ctx) (*pagination.Model, error) {
 		limit = 10
 	}
 	offset := pagination.Offset(page, limit)
-	dbResult := database.Pg.Scopes(queryFunc, sortFunc).
+	dbResult := database.Pg.Scopes(queryFunc, sortFunc, scopeExcludeDeletedCategory).
 		Preload("Category").
 		Limit(limit).
 		Offset(offset)
 
 	total := int64(0)
-	dbCount := database.Pg.Scopes(queryFunc).
+	dbCount := database.Pg.Scopes(queryFunc, scopeExcludeDeletedCategory).
 		Model(&models.Key{})
 
 	if result := dbResult.Find(&keys); result.Error != nil {
@@ -125,4 +128,93 @@ func GetKeys(c *fiber.Ctx) (*pagination.Model, error) {
 	paginationModel := pagination.CreatePaginationModel(limit, page, pageCount, int(total), paginatedKeys)
 
 	return &paginationModel, nil
+}
+
+// GetKeyByID method to get a key by ID.
+func GetKeyByID(keyID uint) (*models.Key, error) {
+	key := &models.Key{}
+
+	if result := database.Pg.
+		Scopes(scopeExcludeDeletedCategory).
+		Preload("Category").
+		Preload("Translations").
+		Find(key, "id = ?", keyID); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return key, nil
+}
+
+// CreateKey method to create a key.
+func CreateKey(keyDto requests.InsertKey) (*models.Key, error) {
+	key := &models.Key{AppName: keyDto.AppName, Name: keyDto.Name}
+	if keyDto.CategoryID != nil {
+		key.CategoryID = sql.Null[uint]{V: *keyDto.CategoryID, Valid: true}
+	}
+	if keyDto.DisabledAt != nil {
+		key.DisabledAt = sql.NullTime{Time: *keyDto.DisabledAt, Valid: true}
+	}
+
+	key.Translations = make([]models.KeyTranslation, len(keyDto.Translations))
+	for i, translation := range keyDto.Translations {
+		key.Translations[i] = models.KeyTranslation{
+			LanguageID: translation.LanguageID,
+			ValueType:  enums.ValueType(translation.ValueType),
+			Value:      translation.Value,
+		}
+	}
+
+	if err := database.Pg.Create(&key).Error; err != nil {
+		return nil, err
+	}
+
+	return key, nil
+}
+
+// UpdateKey method to update a key.
+func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error) {
+	oldKey.Name = keyDto.Name
+	if keyDto.CategoryID != nil {
+		oldKey.CategoryID = sql.Null[uint]{V: *keyDto.CategoryID, Valid: true}
+	} else {
+		oldKey.CategoryID = sql.Null[uint]{Valid: false}
+	}
+	if keyDto.DisabledAt != nil {
+		oldKey.DisabledAt = sql.NullTime{Time: *keyDto.DisabledAt, Valid: true}
+	} else {
+		oldKey.DisabledAt = sql.NullTime{Valid: false}
+	}
+
+	// Update or add translations
+	existingTranslations := make(map[string]*models.KeyTranslation)
+	for i := range oldKey.Translations {
+		existingTranslations[oldKey.Translations[i].LanguageID] = &oldKey.Translations[i]
+	}
+
+	for _, dtoTranslation := range keyDto.Translations {
+		if existing, found := existingTranslations[dtoTranslation.LanguageID]; found {
+			existing.Value = dtoTranslation.Value
+			existing.ValueType = enums.ValueType(dtoTranslation.ValueType)
+		} else {
+			oldKey.Translations = append(oldKey.Translations, models.KeyTranslation{
+				LanguageID: dtoTranslation.LanguageID,
+				ValueType:  enums.ValueType(dtoTranslation.ValueType),
+				Value:      dtoTranslation.Value,
+			})
+		}
+	}
+
+	if result := database.Pg.Save(&oldKey); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &oldKey, nil
+}
+
+// scopeExcludeDeletedCategory excludes keys whose Category was soft-deleted.
+// Keeps keys with NULL category_id.
+func scopeExcludeDeletedCategory(db *gorm.DB) *gorm.DB {
+	return db.
+		Joins("LEFT JOIN categories ON categories.id = keys.category_id").
+		Where("(keys.category_id IS NULL OR categories.deleted_at IS NULL)")
 }
