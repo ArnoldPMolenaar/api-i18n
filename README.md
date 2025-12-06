@@ -1,5 +1,5 @@
 NOTE:
 # Developer clone:
-git clone --recurse-submodules git@github-personal:ArnoldPMolenaar/api-i18n.git
+git clone --recurse-submodules <repository_url>
 # Or if already cloned:
-git submodule update --init --depth 1
+git submodule update --remote --merge
