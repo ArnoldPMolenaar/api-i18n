@@ -43,33 +43,33 @@ func IsKeyDeleted(keyID uint) (bool, error) {
 	}
 }
 
-// HasValidTranslations method to check if the provided language IDs exactly match the app's languages.
-func HasValidTranslations(appName string, languageIDs []string) (bool, error) {
-	languages, err := GetAppLanguages(appName)
+// HasValidTranslations method to check if the provided locale IDs exactly match the app's locales.
+func HasValidTranslations(appName string, localeIDs []string) (bool, error) {
+	locales, err := GetAppLocales(appName)
 	if err != nil {
 		return false, err
 	}
 
-	// Build a set of IDs from languages.
-	languageIDSet := make(map[string]struct{})
-	for _, lang := range languages {
-		languageIDSet[lang.ID] = struct{}{}
+	// Build a set of IDs from locales.
+	localeIDSet := make(map[string]struct{})
+	for _, loc := range locales {
+		localeIDSet[loc.ID] = struct{}{}
 	}
 
-	// Check that every languageID is in languages.
-	for _, id := range languageIDs {
-		if _, exists := languageIDSet[id]; !exists {
+	// Check that every localeID is in locales.
+	for _, id := range localeIDs {
+		if _, exists := localeIDSet[id]; !exists {
 			return false, nil
 		}
 	}
 
-	// Check that every language in languages is in languageIDs.
-	languageIDsSet := make(map[string]struct{})
-	for _, id := range languageIDs {
-		languageIDsSet[id] = struct{}{}
+	// Check that every locale in locales is in localeIDs.
+	localeIDsSet := make(map[string]struct{})
+	for _, id := range localeIDs {
+		localeIDsSet[id] = struct{}{}
 	}
-	for _, lang := range languages {
-		if _, exists := languageIDsSet[lang.ID]; !exists {
+	for _, loc := range locales {
+		if _, exists := localeIDsSet[loc.ID]; !exists {
 			return false, nil
 		}
 	}
@@ -158,9 +158,9 @@ func CreateKey(keyDto requests.InsertKey) (*models.Key, error) {
 	key.Translations = make([]models.KeyTranslation, len(keyDto.Translations))
 	for i, translation := range keyDto.Translations {
 		key.Translations[i] = models.KeyTranslation{
-			LanguageID: translation.LanguageID,
-			ValueType:  enums.ValueType(translation.ValueType),
-			Value:      translation.Value,
+			LocaleID:  translation.LocaleID,
+			ValueType: enums.ValueType(translation.ValueType),
+			Value:     translation.Value,
 		}
 	}
 
@@ -188,18 +188,18 @@ func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error
 	// Update or add translations
 	existingTranslations := make(map[string]*models.KeyTranslation)
 	for i := range oldKey.Translations {
-		existingTranslations[oldKey.Translations[i].LanguageID] = &oldKey.Translations[i]
+		existingTranslations[oldKey.Translations[i].LocaleID] = &oldKey.Translations[i]
 	}
 
 	for _, dtoTranslation := range keyDto.Translations {
-		if existing, found := existingTranslations[dtoTranslation.LanguageID]; found {
+		if existing, found := existingTranslations[dtoTranslation.LocaleID]; found {
 			existing.Value = dtoTranslation.Value
 			existing.ValueType = enums.ValueType(dtoTranslation.ValueType)
 		} else {
 			oldKey.Translations = append(oldKey.Translations, models.KeyTranslation{
-				LanguageID: dtoTranslation.LanguageID,
-				ValueType:  enums.ValueType(dtoTranslation.ValueType),
-				Value:      dtoTranslation.Value,
+				LocaleID:  dtoTranslation.LocaleID,
+				ValueType: enums.ValueType(dtoTranslation.ValueType),
+				Value:     dtoTranslation.Value,
 			})
 		}
 	}
@@ -209,6 +209,16 @@ func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error
 	}
 
 	return &oldKey, nil
+}
+
+// DeleteKey method to delete a key.
+func DeleteKey(keyID uint) error {
+	return database.Pg.Delete(&models.Key{Model: gorm.Model{ID: keyID}}).Error
+}
+
+// RestoreKey method to restore a deleted key.
+func RestoreKey(keyID uint) error {
+	return database.Pg.Unscoped().Model(&models.Key{}).Where("id = ?", keyID).Update("deleted_at", nil).Error
 }
 
 // scopeExcludeDeletedCategory excludes keys whose Category was soft-deleted.

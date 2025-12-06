@@ -1,0 +1,4 @@
+[submodule "src/database/fixtures/cldr-json"]
+	path = src/database/fixtures/cldr-json
+	url = https://github.com/unicode-org/cldr-json.git
+	shallow = true

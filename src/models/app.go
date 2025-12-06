@@ -4,5 +4,5 @@ type App struct {
 	Name string `gorm:"primaryKey:true;autoIncrement:false"`
 
 	// Relationships.
-	Languages []Language `gorm:"many2many:app_languages;foreignKey:Name;joinForeignKey:AppName;references:ID;joinReferences:LanguageId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Locales []Locale `gorm:"many2many:app_locales;foreignKey:Name;joinForeignKey:AppName;references:ID;joinReferences:LocaleId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }

@@ -15,15 +15,15 @@ func IsAppAvailable(app string) (bool, error) {
 	}
 }
 
-// GetAppLanguages method to get the languages of an app.
-func GetAppLanguages(app string) ([]models.Language, error) {
+// GetAppLocales method to get the locales of an app.
+func GetAppLocales(app string) ([]models.Locale, error) {
 	a := models.App{}
 
-	if result := database.Pg.Preload("Languages").Find(&a, "name = ?", app); result.Error != nil {
+	if result := database.Pg.Preload("Locales").Find(&a, "name = ?", app); result.Error != nil {
 		return nil, result.Error
 	}
 
-	return a.Languages, nil
+	return a.Locales, nil
 }
 
 // CreateApp method to create an app.
@@ -37,24 +37,24 @@ func CreateApp(name string) (*models.App, error) {
 	return app, nil
 }
 
-// SetAppLanguages method to set the languages of an app.
-// It also restores existing translations for newly added languages
-// and deletes translations for removed languages.
-func SetAppLanguages(app string, languages []string) error {
+// SetAppLocales method to set the locales of an app.
+// It also restores existing translations for newly added locales
+// and deletes translations for removed locales.
+func SetAppLocales(app string, locales []string) error {
 	a := models.App{Name: app}
-	currentLanguages, err := GetAppLanguages(app)
+	currentLocales, err := GetAppLocales(app)
 	if err != nil {
 		return err
 	}
 
-	currentLanguageIDs := make([]string, len(currentLanguages))
-	for i, lang := range currentLanguages {
-		currentLanguageIDs[i] = lang.ID
+	currentLocaleIDs := make([]string, len(currentLocales))
+	for i, lang := range currentLocales {
+		currentLocaleIDs[i] = lang.ID
 	}
 
-	newLanguages := make([]models.Language, len(languages))
-	for i, langID := range languages {
-		newLanguages[i] = models.Language{ID: langID}
+	newLocales := make([]models.Locale, len(locales))
+	for i, langID := range locales {
+		newLocales[i] = models.Locale{ID: langID}
 	}
 
 	// Start a new transaction
@@ -63,29 +63,29 @@ func SetAppLanguages(app string, languages []string) error {
 		return tx.Error
 	}
 
-	// Clear existing languages
-	if err := tx.Model(&a).Association("Languages").Clear(); err != nil {
+	// Clear existing locales
+	if err := tx.Model(&a).Association("Locales").Clear(); err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Set new languages
-	for _, language := range languages {
-		if err := tx.Model(&a).Association("Languages").Append(&newLanguages); err != nil {
+	// Set new locales
+	for _, locale := range locales {
+		if err := tx.Model(&a).Association("Locales").Append(&newLocales); err != nil {
 			tx.Rollback()
 			return err
 		}
 
-		// Check if the language was not already associated
-		if len(currentLanguages) == 0 || slices.Contains(currentLanguageIDs, language) {
+		// Check if the locale was not already associated
+		if len(currentLocales) == 0 || slices.Contains(currentLocaleIDs, locale) {
 			continue
 		}
 
-		// Try to restore existing translations for the new language
+		// Try to restore existing translations for the new locale
 		if result := tx.Model(&models.KeyTranslation{}).
 			Unscoped().
 			Joins("JOIN keys ON key_translations.key_id = keys.id").
-			Where("key_translations.language_id = ?", language).
+			Where("key_translations.locale_id = ?", locale).
 			Where("keys.app_name = ?", app).
 			Update("deleted_at", nil); result.Error != nil {
 			tx.Rollback()
@@ -93,15 +93,15 @@ func SetAppLanguages(app string, languages []string) error {
 		}
 	}
 
-	// Delete translations for removed languages
-	for _, languageID := range currentLanguageIDs {
-		if slices.Contains(languages, languageID) {
+	// Delete translations for removed locales
+	for _, localeID := range currentLocaleIDs {
+		if slices.Contains(locales, localeID) {
 			continue
 		}
 
 		if result := tx.Model(&models.KeyTranslation{}).
 			Joins("JOIN keys ON key_translations.key_id = keys.id").
-			Where("key_translations.language_id = ?", languageID).
+			Where("key_translations.locale_id = ?", localeID).
 			Where("keys.app_name = ?", app).
 			Delete(&models.KeyTranslation{}); result.Error != nil {
 			tx.Rollback()

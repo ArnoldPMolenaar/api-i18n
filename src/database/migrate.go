@@ -1,24 +1,22 @@
 package database
 
 import (
+	"api-i18n/main/src/enums"
 	"api-i18n/main/src/models"
-
-	"encoding/csv"
-	"errors"
-	"io"
-	"log"
+	"database/sql"
+	"encoding/json"
 	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
+	"slices"
+	"unicode"
 
+	"github.com/gofiber/fiber/v2/log"
 	"gorm.io/gorm"
 )
 
 // Migrate the database schema.
 // See: https://gorm.io/docs/migration.html#Auto-Migration
 func Migrate(db *gorm.DB) error {
-	// Adds the size enum type to the database.
+	// Adds the value type enum type to the database.
 	if tx := db.Exec(`DO $$ 
 	BEGIN 
 		IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'value_type') THEN 
@@ -28,225 +26,344 @@ func Migrate(db *gorm.DB) error {
 		return tx.Error
 	}
 
-	err := db.AutoMigrate(&models.Language{}, &models.Country{}, &models.CountryName{}, &models.App{}, &models.Category{}, &models.Key{}, &models.KeyTranslation{})
+	// Adds the region type enum type to the database.
+	if tx := db.Exec(`DO $$ 
+	BEGIN 
+		IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'territory_type') THEN 
+			CREATE TYPE territory_type AS ENUM ('country', 'numeric'); 
+		END IF; 
+	END $$;`); tx.Error != nil {
+		return tx.Error
+	}
+
+	// Updated migration set: normalized models + existing domain models.
+	err := db.AutoMigrate(&models.Language{}, &models.Script{}, &models.Territory{}, &models.Variant{}, &models.Locale{}, &models.LocaleName{}, &models.ScriptName{}, &models.TerritoryName{}, &models.VariantName{}, &models.App{}, &models.Category{}, &models.Key{}, &models.KeyTranslation{})
 	if err != nil {
 		return err
 	}
-	// --- Begin seed script ---
-	if err := seedLanguages(db); err != nil {
+
+	// -- Start CLDR script migration --
+	if err := seedCLDRData(db); err != nil {
 		return err
 	}
-	if err := seedCountries(db); err != nil {
-		return err
-	}
-	if err := seedCountryNames(db); err != nil {
-		return err
-	}
-	// --- End seed script ---
+	// -- End CLDR script migration --
 
 	return nil
 }
 
-// seedLanguages imports Languages.csv if the languages table is empty.
-func seedLanguages(db *gorm.DB) error {
-	var count int64
-	if err := db.Model(&models.Language{}).Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil // already seeded or manually populated
-	}
-
-	path := filepath.Join("src", "database", "fixtures", "languages.csv")
+// readJSONFile reads a JSON file from the given path and unmarshals it into a map.
+func readJSONFile(path string) (map[string]interface{}, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer func() {
-		if cerr := file.Close(); cerr != nil {
-			log.Printf("seedLanguages: error closing file %s: %v", path, cerr)
-		}
-	}()
+	defer file.Close()
 
-	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1
-
-	var languages []models.Language
-	for {
-		rec, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		if len(rec) < 2 {
-			continue
-		}
-		id := strings.TrimSpace(rec[0])
-		name := strings.TrimSpace(rec[1])
-		if id == "" || name == "" {
-			continue
-		}
-		// Current schema restricts Language.ID size to 4. Skip longer codes to avoid errors.
-		if len(id) > 4 {
-			log.Printf("seedLanguages: skipping language code '%s' (>4 chars). Consider widening Language.ID size if needed.", id)
-			continue
-		}
-		languages = append(languages, models.Language{ID: id, Name: name})
+	var doc map[string]interface{}
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&doc); err != nil {
+		return nil, err
 	}
-	if len(languages) == 0 {
-		return nil
-	}
-	if err := db.Create(&languages).Error; err != nil {
-		return err
-	}
-	return nil
+	return doc, nil
 }
 
-// seedCountries imports Countries.csv if the countries table is empty.
-func seedCountries(db *gorm.DB) error {
-	var count int64
-	if err := db.Model(&models.Country{}).Count(&count).Error; err != nil {
-		return err
+// isNumeric checks if a string consists only of numeric characters.
+func isNumeric(s string) bool {
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
 	}
-	if count > 0 {
-		return nil
-	}
-
-	path := filepath.Join("src", "database", "fixtures", "countries.csv")
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if cerr := file.Close(); cerr != nil {
-			log.Printf("seedCountries: error closing file %s: %v", path, cerr)
-		}
-	}()
-
-	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1
-
-	var countries []models.Country
-	for {
-		rec, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		if len(rec) < 3 {
-			continue
-		}
-		id := strings.TrimSpace(rec[0]) // alpha-2
-		alpha3 := strings.TrimSpace(rec[1])
-		codeStr := strings.TrimSpace(rec[2])
-		if id == "" || alpha3 == "" || codeStr == "" {
-			continue
-		}
-		// Current schema restricts Country.ID size to 2. Skip longer codes to avoid errors.
-		if len(id) > 2 {
-			log.Printf("seedCountries: skipping country code '%s' (>2 chars). Consider widening Country.ID size if needed.", id)
-			continue
-		}
-		// Current schema restricts Country.Alpha3 size to 3. Skip longer codes to avoid errors.
-		if len(alpha3) > 3 {
-			log.Printf("seedCountries: skipping country alpha3 '%s' (>3 chars). Consider widening Country.Alpha3 size if needed.", id)
-			continue
-		}
-		// Parse numeric code (may exceed uint16 range present in model; validation).
-		codeInt, err := strconv.Atoi(codeStr)
-		if err != nil {
-			return err
-		}
-		if codeInt < 0 || codeInt > 65535 {
-			// Warn and skip to avoid silent overflow.
-			log.Printf("seedCountries: skipping country %s numeric code %d outside uint8 range; consider changing Country.Code to a larger integer type.", id, codeInt)
-			continue
-		}
-		countries = append(countries, models.Country{ID: id, Alpha3: alpha3, Code: uint16(codeInt)})
-	}
-	if len(countries) == 0 {
-		return nil
-	}
-	if err := db.Create(&countries).Error; err != nil {
-		return err
-	}
-	return nil
+	return len(s) > 0
 }
 
-// seedCountryNames imports CountryNames.csv if the country_names table is empty.
-func seedCountryNames(db *gorm.DB) error {
-	var count int64
-	if err := db.Model(&models.CountryName{}).Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil
+// seedCLDRData seeds the database with CLDR data for languages, scripts, territories, variants, locales, and their names.
+func seedCLDRData(db *gorm.DB) error {
+	const cldrBasePath = "src/database/fixtures/cldr-json/cldr-json/"
+
+	var languageCount, scriptCount, territoryCount, variantCount, localeCount, scriptNameCount, territoryNameCount, variantNameCount, localeNameCount int64
+	_ = db.Model(&models.Language{}).Count(&languageCount)
+	_ = db.Model(&models.Script{}).Count(&scriptCount)
+	_ = db.Model(&models.Territory{}).Count(&territoryCount)
+	_ = db.Model(&models.Variant{}).Count(&variantCount)
+	_ = db.Model(&models.Locale{}).Count(&localeCount)
+	_ = db.Model(&models.ScriptName{}).Count(&scriptNameCount)
+	_ = db.Model(&models.TerritoryName{}).Count(&territoryNameCount)
+	_ = db.Model(&models.VariantName{}).Count(&variantNameCount)
+	_ = db.Model(&models.LocaleName{}).Count(&localeNameCount)
+
+	if languageCount > 0 && scriptCount > 0 && territoryCount > 0 && variantCount > 0 && localeCount > 0 && scriptNameCount > 0 && territoryNameCount > 0 && variantNameCount > 0 && localeNameCount > 0 {
+		return nil // Data already seeded; skip.
 	}
 
-	// Ensure prerequisite tables have data (languages & countries). If not, skip to avoid FK errors.
-	var langCount, countryCount int64
-	if err := db.Model(&models.Language{}).Count(&langCount).Error; err != nil {
-		return err
-	}
-	if err := db.Model(&models.Country{}).Count(&countryCount).Error; err != nil {
-		return err
-	}
-	if langCount == 0 || countryCount == 0 {
-		return errors.New("seedCountryNames: prerequisite tables empty (languages or countries); cannot seed country names")
-	}
+	log.Info("Seeding CLDR data into the database...")
 
-	path := filepath.Join("src", "database", "fixtures", "country_names.csv")
-	file, err := os.Open(path)
+	languages := make([]models.Language, 0)
+	scripts := make([]models.Script, 0)
+	scriptNames := make([]models.ScriptName, 0)
+	territories := make([]models.Territory, 0)
+	territoryNames := make([]models.TerritoryName, 0)
+	variants := make([]models.Variant, 0)
+	variantNames := make([]models.VariantName, 0)
+	locales := make([]models.Locale, 0)
+	localeNames := make([]models.LocaleName, 0)
+
+	// Get all optional locales.
+	localesDoc, err := readJSONFile(cldrBasePath + "cldr-core/availableLocales.json")
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if cerr := file.Close(); cerr != nil {
-			log.Printf("seedCountryNames: error closing file %s: %v", path, cerr)
-		}
-	}()
+	optionalLocales := localesDoc["availableLocales"].(map[string]interface{})["full"].([]interface{})
 
-	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1
-
-	var names []models.CountryName
-	for {
-		rec, err := reader.Read()
-		if err == io.EOF {
-			break
+	for _, loc := range optionalLocales {
+		locale, ok := loc.(string)
+		if !ok || locale == "" {
+			continue
 		}
+
+		localeNamesDoc, err := readJSONFile(cldrBasePath + "cldr-localenames-full/main/" + locale + "/localeDisplayNames.json")
 		if err != nil {
-			return err
-		}
-		if len(rec) < 3 {
 			continue
 		}
-		languageID := strings.TrimSpace(rec[0])
-		countryID := strings.TrimSpace(rec[1])
-		name := strings.TrimSpace(rec[2])
-		if languageID == "" || countryID == "" || name == "" {
+
+		// Set language if not exists.
+		languageID, ok := localeNamesDoc["main"].(map[string]interface{})[locale].(map[string]interface{})["identity"].(map[string]interface{})["language"].(string)
+		if !ok || languageID == "" {
 			continue
 		}
-		if len(languageID) > 4 { // schema restriction
-			log.Printf("seedCountryNames: skipping entry language '%s' (>4 chars) for country '%s'", languageID, countryID)
-			continue
+		language := models.Language{ID: languageID}
+		if !slices.Contains(languages, language) {
+			languages = append(languages, language)
 		}
-		if len(countryID) > 2 {
-			log.Printf("seedCountryNames: skipping entry invalid country code '%s'", countryID)
-			continue
+
+		// Set script if not exists.
+		scriptID, ok := localeNamesDoc["main"].(map[string]interface{})[locale].(map[string]interface{})["identity"].(map[string]interface{})["script"].(string)
+		if ok && scriptID != "" {
+			script := models.Script{ID: scriptID}
+			if !slices.Contains(scripts, script) {
+				scripts = append(scripts, script)
+			}
 		}
-		names = append(names, models.CountryName{CountryID: countryID, LanguageID: languageID, Name: name})
+
+		// Set territory if not exists.
+		territoryID, ok := localeNamesDoc["main"].(map[string]interface{})[locale].(map[string]interface{})["identity"].(map[string]interface{})["territory"].(string)
+		if ok && territoryID != "" {
+			territoryType := enums.COUNTRY
+			if isNumeric(territoryID) {
+				territoryType = enums.NUMERIC
+			}
+			territory := models.Territory{ID: territoryID, Type: territoryType}
+			if !slices.Contains(territories, territory) {
+				territories = append(territories, territory)
+			}
+		}
+
+		// Set variant if not exists.
+		variantID, ok := localeNamesDoc["main"].(map[string]interface{})[locale].(map[string]interface{})["identity"].(map[string]interface{})["variant"].(string)
+		if ok && variantID != "" {
+			variant := models.Variant{ID: variantID}
+			if !slices.Contains(variants, variant) {
+				variants = append(variants, variant)
+			}
+		}
+
+		// Set locale.
+		localeModel := models.Locale{ID: locale, LanguageID: languageID}
+		if scriptID != "" {
+			localeModel.ScriptID = sql.NullString{String: scriptID, Valid: true}
+		}
+		if territoryID != "" {
+			localeModel.TerritoryID = sql.NullString{String: territoryID, Valid: true}
+		}
+		if variantID != "" {
+			localeModel.VariantID = sql.NullString{String: variantID, Valid: true}
+		}
+		locales = append(locales, localeModel)
+
+		// Set script names.
+		scriptNamesDoc, err := readJSONFile(cldrBasePath + "cldr-localenames-full/main/" + locale + "/scripts.json")
+		if err == nil {
+			scriptNamesMap := scriptNamesDoc["main"].(map[string]interface{})[locale].(map[string]interface{})["localeDisplayNames"].(map[string]interface{})["scripts"].(map[string]interface{})
+			for id, name := range scriptNamesMap {
+				n, ok := name.(string)
+				if !ok || n == "" {
+					continue
+				}
+				script := models.Script{ID: id}
+				if !slices.Contains(scripts, script) {
+					scripts = append(scripts, script)
+				}
+				scriptName := models.ScriptName{
+					ScriptID: id,
+					LocaleID: locale,
+					Name:     n,
+				}
+				scriptNames = append(scriptNames, scriptName)
+			}
+		}
+
+		// Set territory names.
+		territoryNamesDoc, err := readJSONFile(cldrBasePath + "cldr-localenames-full/main/" + locale + "/territories.json")
+		if err == nil {
+			territoryNamesMap := territoryNamesDoc["main"].(map[string]interface{})[locale].(map[string]interface{})["localeDisplayNames"].(map[string]interface{})["territories"].(map[string]interface{})
+			for id, name := range territoryNamesMap {
+				n, ok := name.(string)
+				if !ok || n == "" {
+					continue
+				}
+
+				territoryType := enums.COUNTRY
+				if isNumeric(id) {
+					territoryType = enums.NUMERIC
+				}
+				territory := models.Territory{ID: id, Type: territoryType}
+				if !slices.Contains(territories, territory) {
+					territories = append(territories, territory)
+				}
+
+				territoryName := models.TerritoryName{
+					TerritoryID: id,
+					LocaleID:    locale,
+					Name:        n,
+				}
+				territoryNames = append(territoryNames, territoryName)
+			}
+		}
+
+		// Set variant names.
+		variantNamesDoc, err := readJSONFile(cldrBasePath + "cldr-localenames-full/main/" + locale + "/variants.json")
+		if err == nil {
+			variantNamesMap := variantNamesDoc["main"].(map[string]interface{})[locale].(map[string]interface{})["localeDisplayNames"].(map[string]interface{})["variants"].(map[string]interface{})
+			for id, name := range variantNamesMap {
+				n, ok := name.(string)
+				if !ok || n == "" {
+					continue
+				}
+
+				variant := models.Variant{ID: id}
+				if !slices.Contains(variants, variant) {
+					variants = append(variants, variant)
+				}
+
+				variantName := models.VariantName{
+					VariantID: id,
+					LocaleID:  locale,
+					Name:      n,
+				}
+				variantNames = append(variantNames, variantName)
+			}
+		}
+
+		// Set locale names.
+		languageNamesDoc, err := readJSONFile(cldrBasePath + "cldr-localenames-full/main/" + locale + "/languages.json")
+		if err == nil {
+			languageNamesMap := languageNamesDoc["main"].(map[string]interface{})[locale].(map[string]interface{})["localeDisplayNames"].(map[string]interface{})["languages"].(map[string]interface{})
+			for id, name := range languageNamesMap {
+				n, ok := name.(string)
+				if !ok || n == "" {
+					continue
+				}
+				localeName := models.LocaleName{
+					LocaleIDViewer: locale,
+					LocaleIDTarget: id,
+					Name:           n,
+				}
+				localeNames = append(localeNames, localeName)
+			}
+		}
 	}
-	if len(names) == 0 {
-		return nil
+
+	// Bulk insert collected data.
+
+	if languageCount == 0 && len(languages) > 0 {
+		log.Info("Inserting languages...")
+		if tx := db.Create(&languages); tx.Error != nil {
+			return tx.Error
+		}
 	}
-	// Batch create with controlled chunking to avoid huge insert statements (optional, here simple).
-	if err := db.Create(&names).Error; err != nil {
-		return err
+
+	if scriptCount == 0 && len(scripts) > 0 {
+		log.Info("Inserting scripts...")
+		if tx := db.Create(&scripts); tx.Error != nil {
+			return tx.Error
+		}
 	}
+
+	if territoryCount == 0 && len(territories) > 0 {
+		log.Info("Inserting territories...")
+		if tx := db.Create(&territories); tx.Error != nil {
+			return tx.Error
+		}
+	}
+
+	if variantCount == 0 && len(variants) > 0 {
+		log.Info("Inserting variants...")
+		if tx := db.Create(&variants); tx.Error != nil {
+			return tx.Error
+		}
+	}
+
+	if localeCount == 0 && len(locales) > 0 {
+		log.Info("Inserting locales...")
+		if tx := db.Create(&locales); tx.Error != nil {
+			return tx.Error
+		}
+	}
+
+	if scriptNameCount == 0 && len(scriptNames) > 0 {
+		log.Info("Inserting script names...")
+		for i := range scriptNames {
+			if tx := db.Create(&scriptNames[i]); tx.Error != nil {
+				return tx.Error
+			}
+		}
+	}
+
+	if territoryNameCount == 0 && len(territoryNames) > 0 {
+		log.Info("Inserting territory names...")
+		for i := range territoryNames {
+			if tx := db.Create(&territoryNames[i]); tx.Error != nil {
+				return tx.Error
+			}
+		}
+	}
+
+	if variantNameCount == 0 && len(variantNames) > 0 {
+		log.Info("Inserting variant names...")
+		for i := range variantNames {
+			if tx := db.Create(&variantNames[i]); tx.Error != nil {
+				return tx.Error
+			}
+		}
+	}
+
+	if localeNameCount == 0 && len(localeNames) > 0 {
+		log.Info("Inserting locale names...")
+		for i := range localeNames {
+			var foundViewerId, foundTargetId bool
+			for _, loc := range optionalLocales {
+				locale, ok := loc.(string)
+				if !ok || locale == "" {
+					continue
+				}
+				if !foundViewerId && localeNames[i].LocaleIDViewer == locale {
+					foundViewerId = true
+				}
+				if !foundTargetId && localeNames[i].LocaleIDTarget == locale {
+					foundTargetId = true
+				}
+				if foundViewerId && foundTargetId {
+					break
+				}
+			}
+
+			if foundViewerId && foundTargetId {
+				if tx := db.Create(&localeNames[i]); tx.Error != nil {
+					return tx.Error
+				}
+			}
+		}
+	}
+
 	return nil
 }
