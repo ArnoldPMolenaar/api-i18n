@@ -88,6 +88,24 @@ func GetCategories(c *fiber.Ctx) (*pagination.Model, error) {
 	return &paginationModel, nil
 }
 
+// GetCategoryLookup method to get a lookup of categories.
+func GetCategoryLookup(name *string) (*[]models.Category, error) {
+	categories := make([]models.Category, 0)
+
+	query := database.Pg.Model(&models.Category{}).
+		Select("id", "name")
+
+	if name != nil {
+		query = query.Where("name ILIKE ?", "%"+*name+"%")
+	}
+
+	if result := query.Find(&categories, "disabled_at IS NULL"); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &categories, nil
+}
+
 // GetCategoryByID method to get a category by ID.
 func GetCategoryByID(categoryID uint) (*models.Category, error) {
 	category := &models.Category{}

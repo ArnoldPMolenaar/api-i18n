@@ -8,11 +8,10 @@ import (
 
 // GetTerritoriesLookup method to get territories lookup by locale ID, type and optional name filter.
 func GetTerritoriesLookup(localeID string, t *enums.TerritoryType, name *string) ([]models.TerritoryName, error) {
-	var territories []models.TerritoryName
+	territories := make([]models.TerritoryName, 0)
 
 	query := database.Pg.Model(&models.TerritoryName{}).
-		Joins("JOIN territories ON territory_names.territory_id = territories.id").
-		Where("locale_id = ?", localeID)
+		Joins("JOIN territories ON territory_names.territory_id = territories.id")
 
 	if t != nil {
 		query = query.Where("territories.type = ?", *t)
@@ -22,7 +21,7 @@ func GetTerritoriesLookup(localeID string, t *enums.TerritoryType, name *string)
 		query = query.Where("name ILIKE ?", "%"+*name+"%")
 	}
 
-	if result := query.Find(&territories); result.Error != nil {
+	if result := query.Find(&territories, "locale_id = ?", localeID); result.Error != nil {
 		return nil, result.Error
 	}
 
