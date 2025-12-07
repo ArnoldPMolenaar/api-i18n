@@ -146,7 +146,7 @@ func GetKeyByID(keyID uint) (*models.Key, error) {
 }
 
 // CreateKey method to create a key.
-func CreateKey(keyDto requests.InsertKey) (*models.Key, error) {
+func CreateKey(keyDto requests.CreateKey) (*models.Key, error) {
 	key := &models.Key{AppName: keyDto.AppName, Name: keyDto.Name}
 	if keyDto.CategoryID != nil {
 		key.CategoryID = sql.Null[uint]{V: *keyDto.CategoryID, Valid: true}

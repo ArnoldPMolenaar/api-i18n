@@ -1,6 +1,6 @@
 package requests
 
-type InsertKeyTranslation struct {
+type CreateKeyTranslation struct {
 	LocaleID  string `json:"localeId" validate:"required"`
 	ValueType string `json:"valueType" validate:"required"`
 	Value     string `json:"value" validate:"required"`

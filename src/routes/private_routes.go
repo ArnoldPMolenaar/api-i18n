@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"api-i18n/main/src/controllers"
+
 	"github.com/ArnoldPMolenaar/api-utils/middleware"
 	"github.com/gofiber/fiber/v2"
 )
@@ -10,6 +12,9 @@ func PrivateRoutes(a *fiber.App) {
 	// Create private routes group.
 	route := a.Group("/v1")
 
-	// Register test route
-	route.Get("/test", middleware.MachineProtected())
+	// Register route group for /v1/apps.
+	apps := route.Group("/apps")
+	apps.Post("/", middleware.MachineProtected(), controllers.CreateApp)
+	apps.Get("/:name/locales", middleware.MachineProtected(), controllers.GetAppLocales)
+	apps.Post("/:name/locales", middleware.MachineProtected(), controllers.SetAppLocales)
 }

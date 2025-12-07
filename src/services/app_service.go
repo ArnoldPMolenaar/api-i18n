@@ -4,6 +4,7 @@ import (
 	"api-i18n/main/src/database"
 	"api-i18n/main/src/models"
 	"slices"
+	"time"
 )
 
 // IsAppAvailable method to check if an app is available.
@@ -82,12 +83,16 @@ func SetAppLocales(app string, locales []string) error {
 		}
 
 		// Try to restore existing translations for the new locale
-		if result := tx.Model(&models.KeyTranslation{}).
-			Unscoped().
-			Joins("JOIN keys ON key_translations.key_id = keys.id").
-			Where("key_translations.locale_id = ?", locale).
-			Where("keys.app_name = ?", app).
-			Update("deleted_at", nil); result.Error != nil {
+		if result := tx.Exec(
+			`UPDATE key_translations
+			SET deleted_at = NULL
+			FROM keys
+			WHERE key_translations.key_id = keys.id
+				AND key_translations.deleted_at IS NOT NULL
+				AND key_translations.locale_id = ?
+				AND keys.app_name = ?`,
+			locale, app,
+		); result.Error != nil {
 			tx.Rollback()
 			return result.Error
 		}
@@ -99,11 +104,15 @@ func SetAppLocales(app string, locales []string) error {
 			continue
 		}
 
-		if result := tx.Model(&models.KeyTranslation{}).
-			Joins("JOIN keys ON key_translations.key_id = keys.id").
-			Where("key_translations.locale_id = ?", localeID).
-			Where("keys.app_name = ?", app).
-			Delete(&models.KeyTranslation{}); result.Error != nil {
+		if result := tx.Exec(
+			`UPDATE key_translations
+			 SET deleted_at = ?
+			 FROM keys
+			 WHERE key_translations.key_id = keys.id
+			 	AND key_translations.locale_id = ?
+			    AND keys.app_name = ?`,
+			time.Now().UTC(), localeID, app,
+		); result.Error != nil {
 			tx.Rollback()
 			return result.Error
 		}
