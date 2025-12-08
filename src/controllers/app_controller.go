@@ -4,8 +4,9 @@ import (
 	"api-i18n/main/src/dto/requests"
 	"api-i18n/main/src/dto/responses"
 	"api-i18n/main/src/services"
+	"api-i18n/main/src/utils"
 
-	"github.com/ArnoldPMolenaar/api-utils/utils"
+	util "github.com/ArnoldPMolenaar/api-utils/utils"
 	"github.com/gofiber/fiber/v2"
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
@@ -49,9 +50,9 @@ func CreateApp(c *fiber.Ctx) error {
 	}
 
 	// Validate document fields.
-	validate := utils.NewValidator()
+	validate := util.NewValidator()
 	if err := validate.Struct(request); err != nil {
-		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.Validator, utils.ValidatorErrors(err))
+		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.Validator, util.ValidatorErrors(err))
 	}
 
 	// Create the app.
@@ -82,9 +83,9 @@ func SetAppLocales(c *fiber.Ctx) error {
 	}
 
 	// Validate document fields.
-	validate := utils.NewValidator()
+	validate := util.NewValidator()
 	if err := validate.Struct(request); err != nil {
-		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.Validator, utils.ValidatorErrors(err))
+		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.Validator, util.ValidatorErrors(err))
 	}
 
 	// Check if the app exists.
@@ -93,6 +94,13 @@ func SetAppLocales(c *fiber.Ctx) error {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
 	} else if !appAvailable {
 		return errorutil.Response(c, fiber.StatusNotFound, errorutil.NotFound, "App not found.")
+	}
+
+	for _, locale := range request.Locales {
+		id := utils.ResolveLocaleId(locale)
+		if id == nil {
+			return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "Invalid locale: "+locale)
+		}
 	}
 
 	// Set the app locale.
