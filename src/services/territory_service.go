@@ -11,6 +11,7 @@ func GetTerritoriesLookup(localeID string, t *enums.TerritoryType, name *string)
 	territories := make([]models.TerritoryName, 0)
 
 	query := database.Pg.Model(&models.TerritoryName{}).
+		Preload("Territory").
 		Joins("JOIN territories ON territory_names.territory_id = territories.id")
 
 	if t != nil {

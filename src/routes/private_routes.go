@@ -27,4 +27,8 @@ func PrivateRoutes(a *fiber.App) {
 	categories.Put("/:id", controllers.UpdateCategory)
 	categories.Delete("/:id", controllers.DeleteCategory)
 	categories.Put("/:id/restore", controllers.RestoreCategory)
+
+	// Register route group for /v1/territories.
+	territories := route.Group("/territories", middleware.MachineProtected())
+	territories.Get("/lookup", controllers.GetTerritoryLookup)
 }

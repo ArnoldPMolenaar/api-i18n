@@ -21,3 +21,12 @@ func (tt TerritoryType) Value() (driver.Value, error) {
 func (tt TerritoryType) String() string {
 	return string(tt)
 }
+
+func (tt *TerritoryType) Convert(value string) {
+	switch value {
+	case "country":
+		*tt = COUNTRY
+	case "numeric":
+		*tt = NUMERIC
+	}
+}
