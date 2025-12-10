@@ -7,7 +7,7 @@ import (
 )
 
 // GetTerritoriesLookup method to get territories lookup by locale ID, type and optional name filter.
-func GetTerritoriesLookup(localeID string, t *enums.TerritoryType, name *string) ([]models.TerritoryName, error) {
+func GetTerritoriesLookup(localeID string, t *enums.TerritoryType, name *string) (*[]models.TerritoryName, error) {
 	territories := make([]models.TerritoryName, 0)
 
 	query := database.Pg.Model(&models.TerritoryName{}).
@@ -26,5 +26,5 @@ func GetTerritoriesLookup(localeID string, t *enums.TerritoryType, name *string)
 		return nil, result.Error
 	}
 
-	return territories, nil
+	return &territories, nil
 }

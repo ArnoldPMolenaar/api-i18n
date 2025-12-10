@@ -31,4 +31,8 @@ func PrivateRoutes(a *fiber.App) {
 	// Register route group for /v1/territories.
 	territories := route.Group("/territories", middleware.MachineProtected())
 	territories.Get("/lookup", controllers.GetTerritoryLookup)
+
+	// Register route group for /v1/locales.
+	locales := route.Group("/locales", middleware.MachineProtected())
+	locales.Get("/lookup", controllers.GetLocaleLookup)
 }
