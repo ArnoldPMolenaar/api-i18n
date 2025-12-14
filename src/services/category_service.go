@@ -1,16 +1,24 @@
 package services
 
 import (
+	"api-i18n/main/src/cache"
 	"api-i18n/main/src/database"
 	"api-i18n/main/src/dto/responses"
 	"api-i18n/main/src/models"
+	"context"
 	"database/sql"
+	"encoding/json"
+	"os"
 	"time"
 
 	"github.com/ArnoldPMolenaar/api-utils/pagination"
 	"github.com/gofiber/fiber/v2"
+	"github.com/valkey-io/valkey-go"
 	"gorm.io/gorm"
 )
+
+// categoriesLookupCacheKey returns the key for the categories cache.
+const categoriesLookupCacheKey = "categories:lookup"
 
 // IsCategoryAvailable method to check if a category is available.
 func IsCategoryAvailable(categoryName string, ignore *string) (bool, error) {
@@ -92,15 +100,29 @@ func GetCategories(c *fiber.Ctx) (*pagination.Model, error) {
 func GetCategoryLookup(name *string) (*[]models.Category, error) {
 	categories := make([]models.Category, 0)
 
-	query := database.Pg.Model(&models.Category{}).
-		Select("id", "name")
-
-	if name != nil {
-		query = query.Where("name ILIKE ?", "%"+*name+"%")
+	if inCache, err := isCategoriesLookupInCache(); err != nil {
+		return nil, err
+	} else if inCache {
+		if cacheCategories, err := getCategoriesLookupFromCache(); err != nil {
+			return nil, err
+		} else if cacheCategories != nil && len(*cacheCategories) > 0 {
+			categories = *cacheCategories
+		}
 	}
 
-	if result := query.Find(&categories, "disabled_at IS NULL"); result.Error != nil {
-		return nil, result.Error
+	if len(categories) == 0 {
+		query := database.Pg.Model(&models.Category{}).
+			Select("id", "name")
+
+		if name != nil {
+			query = query.Where("name ILIKE ?", "%"+*name+"%")
+		}
+
+		if result := query.Find(&categories, "disabled_at IS NULL"); result.Error != nil {
+			return nil, result.Error
+		}
+
+		_ = setCategoriesLookupToCache(&categories)
 	}
 
 	return &categories, nil
@@ -129,6 +151,8 @@ func CreateCategory(name string, disabledAt *time.Time) (*models.Category, error
 		return nil, err
 	}
 
+	_ = deleteCategoriesLookupFromCache()
+
 	return result, nil
 }
 
@@ -145,15 +169,93 @@ func UpdateCategory(oldCategory models.Category, name string, disabledAt *time.T
 		return nil, result.Error
 	}
 
+	_ = deleteCategoriesLookupFromCache()
+
 	return &oldCategory, nil
 }
 
 // DeleteCategory method to delete a category.
 func DeleteCategory(categoryID uint) error {
-	return database.Pg.Delete(&models.Category{Model: gorm.Model{ID: categoryID}}).Error
+	err := database.Pg.Delete(&models.Category{Model: gorm.Model{ID: categoryID}}).Error
+	if err == nil {
+		_ = deleteCategoriesLookupFromCache()
+	}
+
+	return err
 }
 
 // RestoreCategory method to restore a deleted category.
 func RestoreCategory(categoryID uint) error {
-	return database.Pg.Unscoped().Model(&models.Category{}).Where("id = ?", categoryID).Update("deleted_at", nil).Error
+	err := database.Pg.Unscoped().Model(&models.Category{}).Where("id = ?", categoryID).Update("deleted_at", nil).Error
+	if err == nil {
+		_ = deleteCategoriesLookupFromCache()
+	}
+
+	return err
+}
+
+// isCategoriesLookupInCache checks if the categories exists in the cache.
+func isCategoriesLookupInCache() (bool, error) {
+	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Exists().Key(categoriesLookupCacheKey).Build())
+	if result.Error() != nil {
+		return false, result.Error()
+	}
+
+	value, err := result.ToInt64()
+	if err != nil {
+		return false, err
+	}
+
+	return value == 1, nil
+}
+
+// getCategoriesLookupFromCache gets the categories from the cache.
+func getCategoriesLookupFromCache() (*[]models.Category, error) {
+	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Get().Key(categoriesLookupCacheKey).Build())
+	if result.Error() != nil {
+		return nil, result.Error()
+	}
+
+	value, err := result.ToString()
+	if err != nil {
+		return nil, err
+	}
+
+	var categories []models.Category
+	if err := json.Unmarshal([]byte(value), &categories); err != nil {
+		return nil, err
+	}
+
+	return &categories, nil
+}
+
+// setCategoriesLookupToCache sets the categories to the cache.
+func setCategoriesLookupToCache(categories *[]models.Category) error {
+	value, err := json.Marshal(categories)
+	if err != nil {
+		return err
+	}
+
+	expiration := os.Getenv("VALKEY_EXPIRATION")
+	duration, err := time.ParseDuration(expiration)
+	if err != nil {
+		return err
+	}
+
+	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Set().Key(categoriesLookupCacheKey).Value(valkey.BinaryString(value)).Ex(duration).Build())
+	if result.Error() != nil {
+		return result.Error()
+	}
+
+	return nil
+}
+
+// deleteCategoriesLookupFromCache deletes an existing categories from the cache.
+func deleteCategoriesLookupFromCache() error {
+	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Del().Key(categoriesLookupCacheKey).Build())
+	if result.Error() != nil {
+		return result.Error()
+	}
+
+	return nil
 }
