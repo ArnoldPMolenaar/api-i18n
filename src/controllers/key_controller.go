@@ -59,6 +59,14 @@ func CreateKey(c *fiber.Ctx) error {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.Validator, util.ValidatorErrors(err))
 	}
 
+	// Check if the app exists.
+	appAvailable, err := services.IsAppAvailable(keyRequest.AppName)
+	if err != nil {
+		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
+	} else if !appAvailable {
+		return errorutil.Response(c, fiber.StatusBadRequest, errors.AppNotFound, "App not found.")
+	}
+
 	// Check if key exists.
 	if available, err := services.IsKeyAvailable(keyRequest.AppName, keyRequest.Name, keyRequest.CategoryID, nil); err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())

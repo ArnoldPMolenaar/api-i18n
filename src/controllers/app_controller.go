@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"api-i18n/main/src/database"
 	"api-i18n/main/src/dto/requests"
 	"api-i18n/main/src/dto/responses"
+	"api-i18n/main/src/models"
 	"api-i18n/main/src/services"
 	"api-i18n/main/src/utils"
 
@@ -11,6 +13,22 @@ import (
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
 )
+
+// HasAppLocales to check if an app has all the given locales.
+func HasAppLocales(appName string, locales ...string) (bool, error) {
+	var count int64
+
+	tx := database.Pg.Model(&models.App{}).
+		Joins("JOIN app_locales ON app_locales.app_name = apps.name").
+		Where("name = ? AND locale_id IN ?", appName, locales).
+		Count(&count)
+
+	if tx.Error != nil {
+		return false, tx.Error
+	}
+
+	return int(count) == len(locales), nil
+}
 
 // GetAppLocales to get the locales of an app.
 func GetAppLocales(c *fiber.Ctx) error {
