@@ -84,6 +84,13 @@ func CreateCategory(c *fiber.Ctx) error {
 		return errorutil.Response(c, fiber.StatusBadRequest, errors.CategoryAvailable, "Category name already exist.")
 	}
 
+	// Check if category name exists as key name.
+	if available, err := services.IsKeyAvailableGlobal(categoryRequest.Name, nil); err != nil {
+		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
+	} else if !available {
+		return errorutil.Response(c, fiber.StatusBadRequest, errors.CategoryIsKey, "Category name is a key name.")
+	}
+
 	// Create category.
 	category, err := services.CreateCategory(categoryRequest.Name, categoryRequest.DisabledAt)
 	if err != nil {
@@ -139,6 +146,13 @@ func UpdateCategory(c *fiber.Ctx) error {
 			return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
 		} else if !available {
 			return errorutil.Response(c, fiber.StatusBadRequest, errors.CategoryAvailable, "Category name already exist.")
+		}
+
+		// Check if category name exists as key name.
+		if available, err := services.IsKeyAvailableGlobal(categoryRequest.Name, nil); err != nil {
+			return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
+		} else if !available {
+			return errorutil.Response(c, fiber.StatusBadRequest, errors.CategoryIsKey, "Category name is a key name.")
 		}
 	}
 

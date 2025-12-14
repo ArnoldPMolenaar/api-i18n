@@ -8,5 +8,5 @@ type CreateKey struct {
 	Name         string                 `json:"name" validate:"required"`
 	Description  *string                `json:"description"`
 	DisabledAt   *time.Time             `json:"disabledAt"`
-	Translations []CreateKeyTranslation `json:"translations" validate:"required,dive"`
+	Translations []CreateKeyTranslation `json:"translations" validate:"required,min=1,dive"`
 }

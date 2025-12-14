@@ -35,4 +35,13 @@ func PrivateRoutes(a *fiber.App) {
 	// Register route group for /v1/locales.
 	locales := route.Group("/locales", middleware.MachineProtected())
 	locales.Get("/lookup", controllers.GetLocaleLookup)
+
+	// Register route group for /v1/keys.
+	keys := route.Group("/keys", middleware.MachineProtected())
+	keys.Get("/", controllers.GetKeys)
+	keys.Post("/", controllers.CreateKey)
+	keys.Get("/:id", controllers.GetKeyByID)
+	keys.Put("/:id", controllers.UpdateKey)
+	keys.Delete("/:id", controllers.DeleteKey)
+	keys.Put("/:id/restore", controllers.RestoreKey)
 }

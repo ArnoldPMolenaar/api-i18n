@@ -34,6 +34,24 @@ func IsKeyAvailable(appName, keyName string, categoryID *uint, ignore *string) (
 	}
 }
 
+// IsKeyAvailableGlobal method to check if a key name is available globally (regardless of app or category).
+func IsKeyAvailableGlobal(keyName string, ignore *string) (bool, error) {
+	query := database.Pg.Limit(1)
+	var result *gorm.DB
+
+	if ignore != nil {
+		result = query.Find(&models.Key{}, "name = ? AND name != ?", keyName, ignore)
+	} else {
+		result = query.Find(&models.Key{}, "name = ?", keyName)
+	}
+
+	if result.Error != nil {
+		return false, result.Error
+	} else {
+		return result.RowsAffected == 0, nil
+	}
+}
+
 // IsKeyDeleted method to check if a key is deleted.
 func IsKeyDeleted(keyID uint) (bool, error) {
 	if result := database.Pg.Unscoped().Limit(1).Find(&models.Key{}, "id = ? AND deleted_at IS NOT NULL", keyID); result.Error != nil {
@@ -138,7 +156,7 @@ func GetKeyByID(keyID uint) (*models.Key, error) {
 		Scopes(scopeExcludeDeletedCategory).
 		Preload("Category").
 		Preload("Translations").
-		Find(key, "id = ?", keyID); result.Error != nil {
+		Find(key, "keys.id = ?", keyID); result.Error != nil {
 		return nil, result.Error
 	}
 
@@ -153,6 +171,9 @@ func CreateKey(keyDto requests.CreateKey) (*models.Key, error) {
 	}
 	if keyDto.DisabledAt != nil {
 		key.DisabledAt = sql.NullTime{Time: *keyDto.DisabledAt, Valid: true}
+	}
+	if keyDto.Description != nil {
+		key.Description = sql.NullString{String: *keyDto.Description, Valid: true}
 	}
 
 	key.Translations = make([]models.KeyTranslation, len(keyDto.Translations))
@@ -184,6 +205,11 @@ func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error
 	} else {
 		oldKey.DisabledAt = sql.NullTime{Valid: false}
 	}
+	if keyDto.Description != nil {
+		oldKey.Description = sql.NullString{String: *keyDto.Description, Valid: true}
+	} else {
+		oldKey.Description = sql.NullString{Valid: false}
+	}
 
 	// Update or add translations
 	existingTranslations := make(map[string]*models.KeyTranslation)
@@ -204,7 +230,7 @@ func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error
 		}
 	}
 
-	if result := database.Pg.Save(&oldKey); result.Error != nil {
+	if result := database.Pg.Session(&gorm.Session{FullSaveAssociations: true}).Save(&oldKey); result.Error != nil {
 		return nil, result.Error
 	}
 
