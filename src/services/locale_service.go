@@ -24,13 +24,13 @@ func IsLocaleAvailable(localeID string) (bool, error) {
 }
 
 // GetLocaleLookup method to get locale lookup names.
-func GetLocaleLookup(localeId string, name *string) (*[]models.LocaleName, error) {
+func GetLocaleLookup(localeID string, name *string) (*[]models.LocaleName, error) {
 	locales := make([]models.LocaleName, 0)
 
-	if inCache, err := isLocalesLookupInCache(localeId); err != nil {
+	if inCache, err := isLocalesLookupInCache(localeID); err != nil {
 		return nil, err
 	} else if inCache {
-		if cacheLocales, err := getLocalesLookupFromCache(localeId); err != nil {
+		if cacheLocales, err := getLocalesLookupFromCache(localeID); err != nil {
 			return nil, err
 		} else if cacheLocales != nil && len(*cacheLocales) > 0 {
 			locales = *cacheLocales
@@ -41,11 +41,11 @@ func GetLocaleLookup(localeId string, name *string) (*[]models.LocaleName, error
 		query := database.Pg.Model(&models.LocaleName{}).
 			Select("locale_id_target", "name")
 
-		if result := query.Find(&locales, "locale_id_viewer = ?", localeId); result.Error != nil {
+		if result := query.Find(&locales, "locale_id_viewer = ?", localeID); result.Error != nil {
 			return nil, result.Error
 		}
 
-		_ = setLocalesLookupToCache(localeId, &locales)
+		_ = setLocalesLookupToCache(localeID, &locales)
 	}
 
 	// If a name filter is provided, perform case-insensitive substring match on the list
@@ -67,8 +67,8 @@ func GetLocaleLookup(localeId string, name *string) (*[]models.LocaleName, error
 }
 
 // isLocalesLookupInCache checks if the locales exists in the cache.
-func isLocalesLookupInCache(localeId string) (bool, error) {
-	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Exists().Key(localeLookupCacheKey(localeId)).Build())
+func isLocalesLookupInCache(localeID string) (bool, error) {
+	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Exists().Key(localeLookupCacheKey(localeID)).Build())
 	if result.Error() != nil {
 		return false, result.Error()
 	}
@@ -82,8 +82,8 @@ func isLocalesLookupInCache(localeId string) (bool, error) {
 }
 
 // getLocalesLookupFromCache gets the locales from the cache.
-func getLocalesLookupFromCache(localeId string) (*[]models.LocaleName, error) {
-	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Get().Key(localeLookupCacheKey(localeId)).Build())
+func getLocalesLookupFromCache(localeID string) (*[]models.LocaleName, error) {
+	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Get().Key(localeLookupCacheKey(localeID)).Build())
 	if result.Error() != nil {
 		return nil, result.Error()
 	}
@@ -102,7 +102,7 @@ func getLocalesLookupFromCache(localeId string) (*[]models.LocaleName, error) {
 }
 
 // setLocalesLookupToCache sets the locales to the cache.
-func setLocalesLookupToCache(localeId string, locales *[]models.LocaleName) error {
+func setLocalesLookupToCache(localeID string, locales *[]models.LocaleName) error {
 	value, err := json.Marshal(locales)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func setLocalesLookupToCache(localeId string, locales *[]models.LocaleName) erro
 		return err
 	}
 
-	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Set().Key(localeLookupCacheKey(localeId)).Value(valkey.BinaryString(value)).Ex(duration).Build())
+	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Set().Key(localeLookupCacheKey(localeID)).Value(valkey.BinaryString(value)).Ex(duration).Build())
 	if result.Error() != nil {
 		return result.Error()
 	}
@@ -123,6 +123,6 @@ func setLocalesLookupToCache(localeId string, locales *[]models.LocaleName) erro
 }
 
 // localeLookupCacheKey returns the key for the locales cache.
-func localeLookupCacheKey(localeId string) string {
-	return fmt.Sprintf("locales:lookup:%s", localeId)
+func localeLookupCacheKey(localeID string) string {
+	return fmt.Sprintf("locales:lookup:%s", localeID)
 }
