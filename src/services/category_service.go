@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ArnoldPMolenaar/api-utils/pagination"
@@ -114,15 +115,26 @@ func GetCategoryLookup(name *string) (*[]models.Category, error) {
 		query := database.Pg.Model(&models.Category{}).
 			Select("id", "name")
 
-		if name != nil {
-			query = query.Where("name ILIKE ?", "%"+*name+"%")
-		}
-
 		if result := query.Find(&categories, "disabled_at IS NULL"); result.Error != nil {
 			return nil, result.Error
 		}
 
 		_ = setCategoriesLookupToCache(&categories)
+	}
+
+	// If a name filter is provided, perform case-insensitive substring match on the list
+	if name != nil {
+		target := strings.TrimSpace(*name)
+		if target != "" {
+			lowerTarget := strings.ToLower(target)
+			filtered := make([]models.Category, 0, len(categories))
+			for i := range categories {
+				if strings.Contains(strings.ToLower(categories[i].Name), lowerTarget) {
+					filtered = append(filtered, categories[i])
+				}
+			}
+			categories = filtered
+		}
 	}
 
 	return &categories, nil
