@@ -16,6 +16,17 @@ func IsAppAvailable(app string) (bool, error) {
 	}
 }
 
+// GetApps method to get all apps.
+func GetApps() (*[]models.App, error) {
+	apps := make([]models.App, 0)
+
+	if result := database.Pg.Preload("Locales").Find(&apps); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &apps, nil
+}
+
 // GetAppLocales method to get the locales of an app.
 func GetAppLocales(app string) ([]models.Locale, error) {
 	a := models.App{}

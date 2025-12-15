@@ -221,7 +221,7 @@ func DeleteKey(c *fiber.Ctx) error {
 	}
 
 	// Delete the Key.
-	if err := services.DeleteKey(key.ID); err != nil {
+	if err := services.DeleteKey(key); err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
 	}
 

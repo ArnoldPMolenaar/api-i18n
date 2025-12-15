@@ -189,6 +189,10 @@ func CreateKey(keyDto requests.CreateKey) (*models.Key, error) {
 		return nil, err
 	}
 
+	for i := range key.Translations {
+		_ = deleteTranslationFromCache(key.AppName, key.Translations[i].LocaleID)
+	}
+
 	return key, nil
 }
 
@@ -234,17 +238,42 @@ func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error
 		return nil, result.Error
 	}
 
+	for i := range oldKey.Translations {
+		_ = deleteTranslationFromCache(oldKey.AppName, oldKey.Translations[i].LocaleID)
+	}
+
 	return &oldKey, nil
 }
 
 // DeleteKey method to delete a key.
-func DeleteKey(keyID uint) error {
-	return database.Pg.Delete(&models.Key{Model: gorm.Model{ID: keyID}}).Error
+func DeleteKey(key *models.Key) error {
+	if err := database.Pg.Delete(&models.Key{Model: gorm.Model{ID: key.ID}}).Error; err != nil {
+		return err
+	}
+
+	for i := range key.Translations {
+		_ = deleteTranslationFromCache(key.AppName, key.Translations[i].LocaleID)
+	}
+
+	return nil
 }
 
 // RestoreKey method to restore a deleted key.
 func RestoreKey(keyID uint) error {
-	return database.Pg.Unscoped().Model(&models.Key{}).Where("id = ?", keyID).Update("deleted_at", nil).Error
+	err := database.Pg.Unscoped().Model(&models.Key{}).Where("id = ?", keyID).Update("deleted_at", nil).Error
+	if err != nil {
+		return err
+	}
+
+	if key, err := GetKeyByID(keyID); err != nil {
+		return err
+	} else {
+		for i := range key.Translations {
+			_ = deleteTranslationFromCache(key.AppName, key.Translations[i].LocaleID)
+		}
+	}
+
+	return nil
 }
 
 // scopeExcludeDeletedCategory excludes keys whose Category was soft-deleted.

@@ -182,6 +182,7 @@ func UpdateCategory(oldCategory models.Category, name string, disabledAt *time.T
 	}
 
 	_ = deleteCategoriesLookupFromCache()
+	_ = deleteAllTranslationsFromCache()
 
 	return &oldCategory, nil
 }
@@ -191,6 +192,7 @@ func DeleteCategory(categoryID uint) error {
 	err := database.Pg.Delete(&models.Category{Model: gorm.Model{ID: categoryID}}).Error
 	if err == nil {
 		_ = deleteCategoriesLookupFromCache()
+		_ = deleteAllTranslationsFromCache()
 	}
 
 	return err
@@ -201,6 +203,7 @@ func RestoreCategory(categoryID uint) error {
 	err := database.Pg.Unscoped().Model(&models.Category{}).Where("id = ?", categoryID).Update("deleted_at", nil).Error
 	if err == nil {
 		_ = deleteCategoriesLookupFromCache()
+		_ = deleteAllTranslationsFromCache()
 	}
 
 	return err
