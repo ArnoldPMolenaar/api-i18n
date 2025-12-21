@@ -24,6 +24,17 @@ The project uses Git submodules (e.g., shared middleware/utilities). Make sure t
 
 ---
 
+## 🌱 Initial Seed (CLDR JSON)
+
+This project includes the `cldr-json` submodule under `src/database/fixtures/cldr-json/`. On the first run, the service reads this repository and seeds core locale, territory, and related data into the database.
+
+- First-time seeding duration: typically 15–30 minutes depending on your hardware.
+- Automatic skip: if the database already contains the seed data, the process is skipped on subsequent runs.
+
+Tip: keep the submodule updated to get the latest CLDR data.
+
+---
+
 ## 🚀 Running with Docker Compose
 
 Build and run the development stack:
@@ -102,6 +113,6 @@ This project is licensed under the MIT License.
 ## 📞 Contact
 For any questions or support, please contact [arnold.molenaar@webmi.nl](mailto:arnold.molenaar@webmi.nl).
 
-<hr></hr>
+<hr />
 
 Made with ❤️ by Arnold Molenaar
