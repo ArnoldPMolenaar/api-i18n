@@ -12,9 +12,13 @@ A lightweight Go microservice that centralizes internationalization (i18n) for a
 ## 📦 Clone with Submodules
 
 # Developer clone:
+```shell
 git clone --recurse-submodules <repository_url>
+```
 # Or if already cloned:
+```shell
 git submodule update --remote --merge
+```
 
 The project uses Git submodules (e.g., shared middleware/utilities). Make sure to clone with `--recurse-submodules` or update submodules after cloning.
 
