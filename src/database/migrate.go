@@ -51,13 +51,18 @@ func Migrate(db *gorm.DB) error {
 	return nil
 }
 
-// readJSONFile reads a JSON file from the given path and unmarshals it into a map.
+// readJSONFile reads a JSON file from the given path and unmarshal it into a map.
 func readJSONFile(path string) (map[string]interface{}, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Errorf("Failed to close file %s: %v", path, err)
+		}
+	}(file)
 
 	var doc map[string]interface{}
 	decoder := json.NewDecoder(file)

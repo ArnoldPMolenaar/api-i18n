@@ -5,6 +5,8 @@ go 1.24.9
 require (
 	github.com/ArnoldPMolenaar/api-utils v0.1.1
 	github.com/gofiber/fiber/v2 v2.52.6
+	github.com/nyaruka/phonenumbers v1.6.7
+	github.com/samber/lo v1.52.0
 	github.com/valkey-io/valkey-go v1.0.57
 	gorm.io/gorm v1.25.12
 )
@@ -27,17 +29,15 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/nyaruka/phonenumbers v1.6.7 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/samber/lo v1.52.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.60.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
-	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gorm.io/driver/postgres v1.5.11 // indirect
 )
