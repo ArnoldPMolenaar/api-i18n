@@ -7,10 +7,11 @@ import (
 	"api-i18n/main/src/middleware"
 	"api-i18n/main/src/routes"
 	"fmt"
+	"os"
+
 	routeutil "github.com/ArnoldPMolenaar/api-utils/routes"
 	"github.com/ArnoldPMolenaar/api-utils/utils"
 	"github.com/gofiber/fiber/v2"
-	"os"
 )
 
 func main() {
@@ -36,6 +37,8 @@ func main() {
 
 	// Register a private routes_util for app.
 	routes.PrivateRoutes(app)
+	// Register a public routes_util for app.
+	routes.PublicRoutes(app)
 	// Register route for 404 Error.
 	routeutil.NotFoundRoute(app)
 

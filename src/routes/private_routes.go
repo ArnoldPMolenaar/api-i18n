@@ -28,14 +28,6 @@ func PrivateRoutes(a *fiber.App) {
 	categories.Delete("/:id", controllers.DeleteCategory)
 	categories.Put("/:id/restore", controllers.RestoreCategory)
 
-	// Register route group for /v1/territories.
-	territories := route.Group("/territories")
-	territories.Get("/lookup", controllers.GetTerritoryLookup)
-
-	// Register route group for /v1/locales.
-	locales := route.Group("/locales")
-	locales.Get("/lookup", controllers.GetLocaleLookup)
-
 	// Register route group for /v1/keys.
 	keys := route.Group("/keys", middleware.MachineProtected())
 	keys.Get("/", controllers.GetKeys)
@@ -44,14 +36,4 @@ func PrivateRoutes(a *fiber.App) {
 	keys.Put("/:id", controllers.UpdateKey)
 	keys.Delete("/:id", controllers.DeleteKey)
 	keys.Put("/:id/restore", controllers.RestoreKey)
-
-	// Register route group for /v1/translations.
-	translations := route.Group("/translations")
-	translations.Get("/:localeId", controllers.GetTranslationsByLocaleId)
-
-	// Register route group for /v1/phones.
-	phones := route.Group("/phones")
-	phones.Get("/lookup", controllers.GetPhoneLookup)
-	phones.Get("/validate", controllers.GetPhoneNumberValidation)
-	phones.Get("/format", controllers.GetPhoneNumberFormat)
 }
