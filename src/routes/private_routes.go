@@ -16,7 +16,7 @@ func PrivateRoutes(a *fiber.App) {
 	apps := route.Group("/apps", middleware.MachineProtected())
 	apps.Post("/", controllers.CreateApp)
 	apps.Get("/:name/locales", controllers.GetAppLocales)
-	apps.Post("/:name/locales", controllers.SetAppLocales)
+	apps.Put("/:name/locales", controllers.SetAppLocales)
 
 	// Register route group for /v1/categories.
 	categories := route.Group("/categories", middleware.MachineProtected())
