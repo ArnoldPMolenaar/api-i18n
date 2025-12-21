@@ -11,7 +11,6 @@ A lightweight Go microservice that centralizes internationalization (i18n) for a
 
 ## 📦 Clone with Submodules
 
-NOTE:
 # Developer clone:
 git clone --recurse-submodules <repository_url>
 # Or if already cloned:
