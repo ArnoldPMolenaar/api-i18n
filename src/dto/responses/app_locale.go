@@ -4,7 +4,7 @@ import "api-i18n/main/src/models"
 
 // AppLocale represents the response structure for application locale settings.
 type AppLocale struct {
-	AppName string   `json:"app_name"`
+	AppName string   `json:"appName"`
 	Locales []string `json:"locales"`
 }
 

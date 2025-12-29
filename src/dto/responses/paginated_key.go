@@ -7,7 +7,7 @@ import (
 
 type PaginatedKey struct {
 	ID                 uint       `json:"id"`
-	CategoryID         *uint      `json:"category_id"`
+	CategoryID         *uint      `json:"categoryId"`
 	Name               string     `json:"name"`
 	AppName            string     `json:"appName"`
 	DisabledAt         *time.Time `json:"disabledAt"`
