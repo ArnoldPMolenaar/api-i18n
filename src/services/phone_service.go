@@ -181,27 +181,27 @@ func preformatNumberAndRegion(number string, region *string) (string, string) {
 func phoneNumberTypeToString(t phonenumbers.PhoneNumberType) string {
 	switch t {
 	case phonenumbers.FIXED_LINE:
-		return "Fixed line"
+		return "FIXED_LINE"
 	case phonenumbers.MOBILE:
-		return "Mobile"
+		return "MOBILE"
 	case phonenumbers.FIXED_LINE_OR_MOBILE:
-		return "Fixed line or mobile"
+		return "FIXED_LINE_OR_MOBILE"
 	case phonenumbers.TOLL_FREE:
-		return "Toll free"
+		return "TOLL_FREE"
 	case phonenumbers.PREMIUM_RATE:
-		return "Premium rate"
+		return "PREMIUM_RATE"
 	case phonenumbers.SHARED_COST:
-		return "Shared cost"
+		return "SHARED_COST"
 	case phonenumbers.VOIP:
-		return "VoIP"
+		return "VOIP"
 	case phonenumbers.PERSONAL_NUMBER:
-		return "Personal number"
+		return "PERSONAL_NUMBER"
 	case phonenumbers.PAGER:
-		return "Pager"
+		return "PAGER"
 	case phonenumbers.UAN:
 		return "UAN"
 	case phonenumbers.VOICEMAIL:
-		return "Voicemail"
+		return "VOICEMAIL"
 	case phonenumbers.UNKNOWN:
 		return ""
 	default:
