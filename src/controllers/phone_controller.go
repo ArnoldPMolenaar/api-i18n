@@ -36,23 +36,17 @@ func GetPhoneLookup(c *fiber.Ctx) error {
 
 // GetPhoneNumberValidation handles the phone number validation request.
 func GetPhoneNumberValidation(c *fiber.Ctx) error {
-	localeIDParam := c.Query("localeId")
+	territoryIDParam := c.Query("territoryId")
 	phoneNumberParam := c.Query("phoneNumber")
 
-	if localeIDParam == "" {
-		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "localeId query parameter is required.")
+	if territoryIDParam == "" {
+		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "territoryId query parameter is required.")
 	}
 	if phoneNumberParam == "" {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "phoneNumber query parameter is required.")
 	}
 
-	// Resolve the locale id for backwards compatibility.
-	resolvedLocaleId := utils.ResolveLocaleId(localeIDParam)
-	if resolvedLocaleId == nil {
-		return errorutil.Response(c, fiber.StatusBadRequest, errors.LocaleNotFound, "Locale not found.")
-	}
-
-	isValid, err := services.ValidatePhoneNumber(phoneNumberParam, resolvedLocaleId)
+	isValid, err := services.ValidatePhoneNumber(phoneNumberParam, &territoryIDParam)
 	if err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.InternalServerError, err.Error())
 	}
@@ -66,23 +60,17 @@ func GetPhoneNumberValidation(c *fiber.Ctx) error {
 // GetPhoneNumberFormat handles the phone number format request.
 // To format a phone number according to the specified locale.
 func GetPhoneNumberFormat(c *fiber.Ctx) error {
-	localeIDParam := c.Query("localeId")
+	territoryIDParam := c.Query("territoryId")
 	phoneNumberParam := c.Query("phoneNumber")
 
-	if localeIDParam == "" {
-		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "localeId query parameter is required.")
+	if territoryIDParam == "" {
+		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "territoryId query parameter is required.")
 	}
 	if phoneNumberParam == "" {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "phoneNumber query parameter is required.")
 	}
 
-	// Resolve the locale id for backwards compatibility.
-	resolvedLocaleId := utils.ResolveLocaleId(localeIDParam)
-	if resolvedLocaleId == nil {
-		return errorutil.Response(c, fiber.StatusBadRequest, errors.LocaleNotFound, "Locale not found.")
-	}
-
-	phoneNumberFormat, err := services.FormatPhoneNumber(phoneNumberParam, resolvedLocaleId)
+	phoneNumberFormat, err := services.FormatPhoneNumber(phoneNumberParam, &territoryIDParam)
 	if err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.InternalServerError, err.Error())
 	}
