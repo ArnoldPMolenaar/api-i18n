@@ -100,13 +100,14 @@ func GetKeys(c *fiber.Ctx) (*pagination.Model, error) {
 	keys := make([]models.Key, 0)
 	values := c.Request().URI().QueryArgs()
 	allowedColumns := map[string]bool{
-		"id":          true,
-		"category_id": true,
-		"app_name":    true,
-		"name":        true,
-		"disabled_at": true,
-		"created_at":  true,
-		"updated_at":  true,
+		"id":               true,
+		"category_id":      true,
+		"app_name":         true,
+		"keys.name":        true,
+		"categories.name":  true,
+		"keys.disabled_at": true,
+		"keys.created_at":  true,
+		"keys.updated_at":  true,
 	}
 
 	queryFunc := pagination.Query(values, allowedColumns)

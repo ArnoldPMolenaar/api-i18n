@@ -3,7 +3,7 @@ module api-i18n/main
 go 1.24.9
 
 require (
-	github.com/ArnoldPMolenaar/api-utils v0.1.1
+	github.com/ArnoldPMolenaar/api-utils v0.1.3
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/nyaruka/phonenumbers v1.6.7
 	github.com/samber/lo v1.52.0
