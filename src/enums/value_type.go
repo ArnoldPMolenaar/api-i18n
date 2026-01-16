@@ -7,6 +7,7 @@ type ValueType string
 const (
 	TEXT ValueType = "text"
 	HTML ValueType = "html"
+	JSON ValueType = "json"
 )
 
 func (vt *ValueType) Scan(value interface{}) error {

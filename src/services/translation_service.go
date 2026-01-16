@@ -3,6 +3,7 @@ package services
 import (
 	"api-i18n/main/src/cache"
 	"api-i18n/main/src/database"
+	"api-i18n/main/src/enums"
 	"api-i18n/main/src/models"
 	"context"
 	"encoding/json"
@@ -18,16 +19,6 @@ import (
 func GetTranslationsByLocaleId(appName, localeID string) (*map[string]interface{}, error) {
 	var keys []models.Key
 
-	tx := database.Pg.Model(&models.Key{}).
-		Preload("Category").
-		Preload("Translations", "locale_id = ?", localeID).
-		Joins("LEFT JOIN categories ON categories.id = category_id").
-		Where("app_name = ? AND keys.disabled_at IS NULL AND categories.disabled_at IS NULL", appName).
-		Find(&keys)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
 	translations := make(map[string]interface{})
 	if inCache, err := isTranslationInCache(appName, localeID); err != nil {
 		return nil, err
@@ -40,6 +31,16 @@ func GetTranslationsByLocaleId(appName, localeID string) (*map[string]interface{
 	}
 
 	if len(translations) == 0 {
+		tx := database.Pg.Model(&models.Key{}).
+			Preload("Category").
+			Preload("Translations", "locale_id = ?", localeID).
+			Joins("LEFT JOIN categories ON categories.id = category_id").
+			Where("app_name = ? AND keys.disabled_at IS NULL AND categories.disabled_at IS NULL AND categories.deleted_at IS NULL", appName).
+			Find(&keys)
+		if tx.Error != nil {
+			return nil, tx.Error
+		}
+
 		for _, key := range keys {
 			keyName := lo.CamelCase(key.Name)
 
@@ -48,19 +49,25 @@ func GetTranslationsByLocaleId(appName, localeID string) (*map[string]interface{
 				continue
 			}
 
+			// Decide value type: string or raw JSON
+			var v interface{} = key.Translations[0].Value
+			if vStr, ok := v.(string); ok && vStr != "" && key.Translations[0].ValueType == enums.JSON {
+				v = getJson(vStr)
+			}
+
 			if !key.CategoryID.Valid {
-				translations[key.Name] = key.Translations[0].Value
+				translations[key.Name] = v
 				continue
 			}
 
 			categoryName := lo.CamelCase(key.Category.Name)
 
 			if _, exists := translations[categoryName]; !exists {
-				translations[categoryName] = make(map[string]string)
+				translations[categoryName] = make(map[string]interface{})
 			}
 
-			categoryMap := translations[categoryName].(map[string]string)
-			categoryMap[keyName] = key.Translations[0].Value
+			categoryMap := translations[categoryName].(map[string]interface{})
+			categoryMap[keyName] = v
 		}
 
 		_ = setTranslationToCache(appName, localeID, &translations)
@@ -157,4 +164,9 @@ func deleteAllTranslationsFromCache() error {
 // translationCacheKey returns the key for the locales cache.
 func translationCacheKey(appName, localeID string) string {
 	return fmt.Sprintf("translations:%s:%s", appName, localeID)
+}
+
+// getJson converts a string to json.RawMessage.
+func getJson(value string) json.RawMessage {
+	return json.RawMessage(value)
 }

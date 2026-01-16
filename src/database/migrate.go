@@ -20,7 +20,7 @@ func Migrate(db *gorm.DB) error {
 	if tx := db.Exec(`DO $$ 
 	BEGIN 
 		IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'value_type') THEN 
-			CREATE TYPE value_type AS ENUM ('text', 'html'); 
+			CREATE TYPE value_type AS ENUM ('text', 'html', 'json'); 
 		END IF; 
 	END $$;`); tx.Error != nil {
 		return tx.Error
