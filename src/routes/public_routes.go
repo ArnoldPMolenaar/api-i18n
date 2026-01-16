@@ -11,6 +11,10 @@ func PublicRoutes(a *fiber.App) {
 	// Create public routes group.
 	route := a.Group("/v1")
 
+	// Register route group for /v1/apps.
+	apps := route.Group("/apps")
+	apps.Get("/:name/locales", controllers.GetAppLocales)
+
 	// Register route group for /v1/territories.
 	territories := route.Group("/territories")
 	territories.Get("/lookup", controllers.GetTerritoryLookup)
