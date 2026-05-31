@@ -3,7 +3,7 @@ package routes
 import (
 	"api-i18n/main/src/controllers"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // PublicRoutes func for describe group of public routes.

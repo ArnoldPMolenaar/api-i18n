@@ -16,7 +16,7 @@ import (
 )
 
 // GetTranslationsByLocaleId func to get translations by locale ID.
-func GetTranslationsByLocaleId(appName, localeID string) (*map[string]interface{}, error) {
+func GetTranslationsByLocaleId(appName, localeID string) (map[string]interface{}, error) {
 	var keys []models.Key
 
 	translations := make(map[string]interface{})
@@ -25,8 +25,8 @@ func GetTranslationsByLocaleId(appName, localeID string) (*map[string]interface{
 	} else if inCache {
 		if cacheTranslation, err := getTranslationFromCache(appName, localeID); err != nil {
 			return nil, err
-		} else if cacheTranslation != nil && len(*cacheTranslation) > 0 {
-			translations = *cacheTranslation
+		} else if len(cacheTranslation) > 0 {
+			translations = cacheTranslation
 		}
 	}
 
@@ -41,7 +41,8 @@ func GetTranslationsByLocaleId(appName, localeID string) (*map[string]interface{
 			return nil, tx.Error
 		}
 
-		for _, key := range keys {
+		for i := range keys {
+			key := &keys[i]
 			keyName := lo.CamelCase(key.Name)
 
 			if len(key.Translations) == 0 {
@@ -70,10 +71,10 @@ func GetTranslationsByLocaleId(appName, localeID string) (*map[string]interface{
 			categoryMap[keyName] = v
 		}
 
-		_ = setTranslationToCache(appName, localeID, &translations)
+		_ = setTranslationToCache(appName, localeID, translations)
 	}
 
-	return &translations, nil
+	return translations, nil
 }
 
 // isTranslationInCache checks if the translation exists in the cache.
@@ -92,7 +93,7 @@ func isTranslationInCache(appName, localeID string) (bool, error) {
 }
 
 // getTranslationFromCache gets the translation from the cache.
-func getTranslationFromCache(appName, localeID string) (*map[string]interface{}, error) {
+func getTranslationFromCache(appName, localeID string) (map[string]interface{}, error) {
 	result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Get().Key(translationCacheKey(appName, localeID)).Build())
 	if result.Error() != nil {
 		return nil, result.Error()
@@ -108,11 +109,11 @@ func getTranslationFromCache(appName, localeID string) (*map[string]interface{},
 		return nil, err
 	}
 
-	return &translation, nil
+	return translation, nil
 }
 
 // setTranslationToCache sets the translation to the cache.
-func setTranslationToCache(appName, localeID string, translations *map[string]interface{}) error {
+func setTranslationToCache(appName, localeID string, translations map[string]interface{}) error {
 	value, err := json.Marshal(translations)
 	if err != nil {
 		return err
@@ -149,8 +150,10 @@ func deleteAllTranslationsFromCache() error {
 		return err
 	}
 
-	for _, app := range *apps {
-		for _, locale := range app.Locales {
+	for i := range *apps {
+		app := &(*apps)[i]
+		for j := range app.Locales {
+			locale := &app.Locales[j]
 			result := cache.Valkey.Do(context.Background(), cache.Valkey.B().Del().Key(translationCacheKey(app.Name, locale.ID)).Build())
 			if result.Error() != nil {
 				return result.Error()

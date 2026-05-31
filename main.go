@@ -11,10 +11,17 @@ import (
 
 	routeutil "github.com/ArnoldPMolenaar/api-utils/routes"
 	"github.com/ArnoldPMolenaar/api-utils/utils"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/log"
+)
+
+var (
+	version string
 )
 
 func main() {
+	log.Info("Running version: ", version)
+
 	// Define Fiber config.
 	config := configs.FiberConfig()
 
@@ -39,6 +46,9 @@ func main() {
 	routes.PrivateRoutes(app)
 	// Register a public routes_util for app.
 	routes.PublicRoutes(app)
+	// Register k8s routes.
+	routeutil.HealthRoute(app)
+	routeutil.KubernetesProbeRoutes(app, database.ReadinessCheck, cache.ReadinessCheck, database.MigrationReadinessCheck)
 	// Register route for 404 Error.
 	routeutil.NotFoundRoute(app)
 

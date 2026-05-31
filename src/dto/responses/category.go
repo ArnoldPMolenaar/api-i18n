@@ -3,6 +3,8 @@ package responses
 import (
 	"api-i18n/main/src/models"
 	"time"
+
+	"github.com/ArnoldPMolenaar/api-utils/utils"
 )
 
 type Category struct {
@@ -17,10 +19,7 @@ type Category struct {
 func (c *Category) SetCategory(cat *models.Category) {
 	c.ID = cat.ID
 	c.Name = cat.Name
+	c.DisabledAt = utils.PtrFromNullTime(cat.DisabledAt)
 	c.CreatedAt = cat.CreatedAt
 	c.UpdatedAt = cat.UpdatedAt
-
-	if cat.DisabledAt.Valid {
-		c.DisabledAt = &cat.DisabledAt.Time
-	}
 }

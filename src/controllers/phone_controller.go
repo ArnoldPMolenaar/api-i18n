@@ -7,11 +7,11 @@ import (
 	"api-i18n/main/src/utils"
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // GetPhoneLookup handles the phone code lookup request.
-func GetPhoneLookup(c *fiber.Ctx) error {
+func GetPhoneLookup(c fiber.Ctx) error {
 	localeIDParam := c.Query("localeId")
 	if localeIDParam == "" {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "localeId query parameter is required.")
@@ -35,7 +35,7 @@ func GetPhoneLookup(c *fiber.Ctx) error {
 }
 
 // GetPhoneNumberValidation handles the phone number validation request.
-func GetPhoneNumberValidation(c *fiber.Ctx) error {
+func GetPhoneNumberValidation(c fiber.Ctx) error {
 	territoryIDParam := c.Query("territoryId")
 	phoneNumberParam := c.Query("phoneNumber")
 
@@ -59,7 +59,7 @@ func GetPhoneNumberValidation(c *fiber.Ctx) error {
 
 // GetPhoneNumberFormat handles the phone number format request.
 // To format a phone number according to the specified locale.
-func GetPhoneNumberFormat(c *fiber.Ctx) error {
+func GetPhoneNumberFormat(c fiber.Ctx) error {
 	territoryIDParam := c.Query("territoryId")
 	phoneNumberParam := c.Query("phoneNumber")
 

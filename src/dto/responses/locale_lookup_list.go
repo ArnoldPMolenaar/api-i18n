@@ -9,9 +9,9 @@ type LocaleLookupList struct {
 // SetLocaleLookupList sets the list of locale lookups.
 func (lll *LocaleLookupList) SetLocaleLookupList(locales *[]models.LocaleName) {
 	lll.Locales = make([]LocaleLookup, len(*locales))
-	for i, locale := range *locales {
+	for i := range *locales {
 		var ll LocaleLookup
-		ll.SetLocaleLookup(&locale)
+		ll.SetLocaleLookup(&(*locales)[i])
 		lll.Locales[i] = ll
 	}
 }

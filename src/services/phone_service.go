@@ -20,7 +20,8 @@ func GetTerritoryPhoneCodes(localeID string) (*[]responses.PhoneCodeLookup, erro
 	}
 
 	territoriesMap := make(map[string]string)
-	for _, territory := range *territories {
+	for i := range *territories {
+		territory := &(*territories)[i]
 		territoriesMap[territory.TerritoryID] = territory.Name
 	}
 
@@ -156,7 +157,7 @@ func FormatPhoneNumber(number string, region *string) (*responses.PhoneNumberFor
 }
 
 // preformatNumberAndRegion trims spaces and ensures the number starts with '+' if no region is provided.
-func preformatNumberAndRegion(number string, region *string) (string, string) {
+func preformatNumberAndRegion(number string, region *string) (formattedNumber, formattedRegion string) {
 	n := strings.TrimSpace(number)
 	r := ""
 

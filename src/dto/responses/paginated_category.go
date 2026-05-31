@@ -3,6 +3,8 @@ package responses
 import (
 	"api-i18n/main/src/models"
 	"time"
+
+	"github.com/ArnoldPMolenaar/api-utils/utils"
 )
 
 type PaginatedCategory struct {
@@ -17,12 +19,7 @@ type PaginatedCategory struct {
 func (c *PaginatedCategory) SetPaginatedCategory(category *models.Category) {
 	c.ID = category.ID
 	c.Name = category.Name
+	c.DisabledAt = utils.PtrFromNullTime(category.DisabledAt)
 	c.CreatedAt = category.CreatedAt
 	c.UpdatedAt = category.UpdatedAt
-	c.DisabledAt = func() *time.Time {
-		if category.DisabledAt.Valid {
-			return &category.DisabledAt.Time
-		}
-		return nil
-	}()
 }

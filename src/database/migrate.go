@@ -9,7 +9,7 @@ import (
 	"slices"
 	"unicode"
 
-	"github.com/gofiber/fiber/v2/log"
+	"github.com/gofiber/fiber/v3/log"
 	"gorm.io/gorm"
 )
 
@@ -79,7 +79,7 @@ func isNumeric(s string) bool {
 			return false
 		}
 	}
-	return len(s) > 0
+	return s != ""
 }
 
 // seedCLDRData seeds the database with CLDR data for languages, scripts, territories, variants, locales, and their names.

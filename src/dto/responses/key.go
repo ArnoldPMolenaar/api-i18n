@@ -3,6 +3,8 @@ package responses
 import (
 	"api-i18n/main/src/models"
 	"time"
+
+	"github.com/ArnoldPMolenaar/api-utils/utils"
 )
 
 type Key struct {
@@ -22,21 +24,10 @@ type Key struct {
 func (k *Key) SetKey(key *models.Key) {
 	k.ID = key.ID
 	k.AppName = key.AppName
-
-	if key.CategoryID.Valid {
-		k.CategoryID = &key.CategoryID.V
-	}
-
+	k.CategoryID = utils.PtrFromNull[uint](key.CategoryID)
 	k.Name = key.Name
-
-	if key.Description.Valid {
-		k.Description = &key.Description.String
-	}
-
-	if key.DisabledAt.Valid {
-		k.DisabledAt = &key.DisabledAt.Time
-	}
-
+	k.Description = utils.PtrFromNullString(key.Description)
+	k.DisabledAt = utils.PtrFromNullTime(key.DisabledAt)
 	k.CreatedAt = key.CreatedAt
 	k.UpdatedAt = key.UpdatedAt
 
@@ -47,9 +38,9 @@ func (k *Key) SetKey(key *models.Key) {
 
 	if len(key.Translations) > 0 {
 		k.Translations = make([]KeyTranslation, len(key.Translations))
-		for i, translation := range key.Translations {
+		for i := range key.Translations {
 			k.Translations[i] = KeyTranslation{}
-			k.Translations[i].SetKeyTranslation(&translation)
+			k.Translations[i].SetKeyTranslation(&key.Translations[i])
 		}
 	}
 }

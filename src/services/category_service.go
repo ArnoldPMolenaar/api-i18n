@@ -9,11 +9,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ArnoldPMolenaar/api-utils/pagination"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/valkey-io/valkey-go"
 	"gorm.io/gorm"
 )
@@ -33,9 +34,9 @@ func IsCategoryAvailable(categoryName string, ignore *string) (bool, error) {
 
 	if result.Error != nil {
 		return false, result.Error
-	} else {
-		return result.RowsAffected == 0, nil
 	}
+
+	return result.RowsAffected == 0, nil
 }
 
 // IsCategoryDeleted method to check if a category is deleted.
@@ -48,7 +49,7 @@ func IsCategoryDeleted(categoryID uint) (bool, error) {
 }
 
 // GetCategories method to get paginated categories.
-func GetCategories(c *fiber.Ctx) (*pagination.Model, error) {
+func GetCategories(c fiber.Ctx) (*pagination.Model, error) {
 	categories := make([]models.Category, 0)
 	values := c.Request().URI().QueryArgs()
 	allowedColumns := map[string]bool{
@@ -61,11 +62,17 @@ func GetCategories(c *fiber.Ctx) (*pagination.Model, error) {
 
 	queryFunc := pagination.Query(values, allowedColumns)
 	sortFunc := pagination.Sort(values, allowedColumns)
-	page := c.QueryInt("page", 1)
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil {
+		page = 1
+	}
 	if page < 1 {
 		page = 1
 	}
-	limit := c.QueryInt("limit", 10)
+	limit, err := strconv.Atoi(c.Query("limit", "10"))
+	if err != nil {
+		limit = 10
+	}
 	if limit < 1 {
 		limit = 10
 	}
@@ -169,7 +176,7 @@ func CreateCategory(name string, disabledAt *time.Time) (*models.Category, error
 }
 
 // UpdateCategory method to update a category.
-func UpdateCategory(oldCategory models.Category, name string, disabledAt *time.Time) (*models.Category, error) {
+func UpdateCategory(oldCategory *models.Category, name string, disabledAt *time.Time) (*models.Category, error) {
 	oldCategory.Name = name
 	if disabledAt != nil {
 		oldCategory.DisabledAt = sql.NullTime{Time: *disabledAt, Valid: true}
@@ -177,14 +184,14 @@ func UpdateCategory(oldCategory models.Category, name string, disabledAt *time.T
 		oldCategory.DisabledAt = sql.NullTime{Valid: false}
 	}
 
-	if result := database.Pg.Save(&oldCategory); result.Error != nil {
+	if result := database.Pg.Save(oldCategory); result.Error != nil {
 		return nil, result.Error
 	}
 
 	_ = deleteCategoriesLookupFromCache()
 	_ = deleteAllTranslationsFromCache()
 
-	return &oldCategory, nil
+	return oldCategory, nil
 }
 
 // DeleteCategory method to delete a category.

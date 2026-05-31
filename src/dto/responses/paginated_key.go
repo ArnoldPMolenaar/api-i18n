@@ -3,6 +3,8 @@ package responses
 import (
 	"api-i18n/main/src/models"
 	"time"
+
+	"github.com/ArnoldPMolenaar/api-utils/utils"
 )
 
 type PaginatedKey struct {
@@ -20,30 +22,15 @@ type PaginatedKey struct {
 // SetPaginatedKey method to set key data from models.Key{}.
 func (k *PaginatedKey) SetPaginatedKey(key *models.Key) {
 	k.ID = key.ID
-	k.CategoryID = func() *uint {
-		if key.CategoryID.Valid {
-			return &key.CategoryID.V
-		}
-		return nil
-	}()
+	k.CategoryID = utils.PtrFromNull[uint](key.CategoryID)
 	k.AppName = key.AppName
 	k.Name = key.Name
+	k.DisabledAt = utils.PtrFromNullTime(key.DisabledAt)
 	k.CreatedAt = key.CreatedAt
 	k.UpdatedAt = key.UpdatedAt
-	k.DisabledAt = func() *time.Time {
-		if key.DisabledAt.Valid {
-			return &key.DisabledAt.Time
-		}
-		return nil
-	}()
 
 	if key.Category != nil {
 		k.CategoryName = &key.Category.Name
-		k.CategoryDisabledAt = func() *time.Time {
-			if key.Category.DisabledAt.Valid {
-				return &key.Category.DisabledAt.Time
-			}
-			return nil
-		}()
+		k.CategoryDisabledAt = utils.PtrFromNullTime(key.Category.DisabledAt)
 	}
 }

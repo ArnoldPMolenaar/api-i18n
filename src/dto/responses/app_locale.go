@@ -13,8 +13,8 @@ func (al *AppLocale) SetAppLocale(appName string, locales []models.Locale) {
 	al.AppName = appName
 	al.Locales = make([]string, len(locales))
 
-	for i, locale := range locales {
-		al.Locales[i] = locale.ID
+	for i := range locales {
+		al.Locales[i] = locales[i].ID
 	}
 }
 

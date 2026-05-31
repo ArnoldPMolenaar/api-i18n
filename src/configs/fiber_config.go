@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ArnoldPMolenaar/api-utils/utils"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // FiberConfig func for configuration Fiber app.

@@ -8,11 +8,11 @@ import (
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
 	util "github.com/ArnoldPMolenaar/api-utils/utils"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // GetCategories func for getting all categories paginated.
-func GetCategories(c *fiber.Ctx) error {
+func GetCategories(c fiber.Ctx) error {
 	paginationModel, err := services.GetCategories(c)
 	if err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
@@ -22,7 +22,7 @@ func GetCategories(c *fiber.Ctx) error {
 }
 
 // GetCategoryLookup func for getting category lookup.
-func GetCategoryLookup(c *fiber.Ctx) error {
+func GetCategoryLookup(c fiber.Ctx) error {
 	nameParam := c.Query("name")
 	var name *string
 	if nameParam != "" {
@@ -41,7 +41,7 @@ func GetCategoryLookup(c *fiber.Ctx) error {
 }
 
 // GetCategoryByID func for getting a category by ID.
-func GetCategoryByID(c *fiber.Ctx) error {
+func GetCategoryByID(c fiber.Ctx) error {
 	categoryIDParam := c.Params("id")
 	categoryID, err := util.StringToUint(categoryIDParam)
 	if err != nil {
@@ -62,12 +62,12 @@ func GetCategoryByID(c *fiber.Ctx) error {
 }
 
 // CreateCategory func for creating a category.
-func CreateCategory(c *fiber.Ctx) error {
+func CreateCategory(c fiber.Ctx) error {
 	// Create a new category struct for the request.
 	categoryRequest := &requests.CreateCategory{}
 
 	// Check, if received JSON data is parsed.
-	if err := c.BodyParser(categoryRequest); err != nil {
+	if err := c.Bind().Body(categoryRequest); err != nil {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.BodyParse, err.Error())
 	}
 
@@ -105,7 +105,7 @@ func CreateCategory(c *fiber.Ctx) error {
 }
 
 // UpdateCategory func for updating a category.
-func UpdateCategory(c *fiber.Ctx) error {
+func UpdateCategory(c fiber.Ctx) error {
 	// Get the categoryID parameter from the URL.
 	categoryIDParam := c.Params("id")
 	categoryID, err := util.StringToUint(categoryIDParam)
@@ -117,7 +117,7 @@ func UpdateCategory(c *fiber.Ctx) error {
 	categoryRequest := &requests.UpdateCategory{}
 
 	// Check, if received JSON data is parsed.
-	if err := c.BodyParser(categoryRequest); err != nil {
+	if err := c.Bind().Body(categoryRequest); err != nil {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.BodyParse, err.Error())
 	}
 
@@ -157,7 +157,7 @@ func UpdateCategory(c *fiber.Ctx) error {
 	}
 
 	// Update category.
-	updatedCategory, err := services.UpdateCategory(*oldCategory, categoryRequest.Name, categoryRequest.DisabledAt)
+	updatedCategory, err := services.UpdateCategory(oldCategory, categoryRequest.Name, categoryRequest.DisabledAt)
 	if err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
 	}
@@ -170,7 +170,7 @@ func UpdateCategory(c *fiber.Ctx) error {
 }
 
 // DeleteCategory func for deleting a category.
-func DeleteCategory(c *fiber.Ctx) error {
+func DeleteCategory(c fiber.Ctx) error {
 	// Get the ID from the URL.
 	id, err := util.StringToUint(c.Params("id"))
 	if err != nil {
@@ -194,7 +194,7 @@ func DeleteCategory(c *fiber.Ctx) error {
 }
 
 // RestoreCategory func for restoring a deleted Category.
-func RestoreCategory(c *fiber.Ctx) error {
+func RestoreCategory(c fiber.Ctx) error {
 	// Get the ID from the URL.
 	id, err := util.StringToUint(c.Params("id"))
 	if err != nil {

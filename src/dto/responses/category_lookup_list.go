@@ -9,9 +9,9 @@ type CategoryLookupList struct {
 // SetCategoryLookupList sets the list of category lookups.
 func (cll *CategoryLookupList) SetCategoryLookupList(categories *[]models.Category) {
 	cll.Categories = make([]CategoryLookup, len(*categories))
-	for i, category := range *categories {
+	for i := range *categories {
 		var cl CategoryLookup
-		cl.SetCategoryLookup(&category)
+		cl.SetCategoryLookup(&(*categories)[i])
 		cll.Categories[i] = cl
 	}
 }

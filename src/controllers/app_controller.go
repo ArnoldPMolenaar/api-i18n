@@ -9,7 +9,7 @@ import (
 	"api-i18n/main/src/utils"
 
 	util "github.com/ArnoldPMolenaar/api-utils/utils"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
 )
@@ -31,7 +31,7 @@ func HasAppLocales(appName string, locales ...string) (bool, error) {
 }
 
 // GetAppLocales to get the locales of an app.
-func GetAppLocales(c *fiber.Ctx) error {
+func GetAppLocales(c fiber.Ctx) error {
 	// Get the appName parameter from the URL.
 	appNameParam := c.Params("name")
 	if appNameParam == "" {
@@ -60,10 +60,10 @@ func GetAppLocales(c *fiber.Ctx) error {
 }
 
 // CreateApp method to create an app.
-func CreateApp(c *fiber.Ctx) error {
+func CreateApp(c fiber.Ctx) error {
 	// Parse the request.
 	request := requests.CreateApp{}
-	if err := c.BodyParser(&request); err != nil {
+	if err := c.Bind().Body(&request); err != nil {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.BodyParse, err.Error())
 	}
 
@@ -87,7 +87,7 @@ func CreateApp(c *fiber.Ctx) error {
 }
 
 // SetAppLocales to set the locale of an app.
-func SetAppLocales(c *fiber.Ctx) error {
+func SetAppLocales(c fiber.Ctx) error {
 	// Get the appName parameter from the URL.
 	appNameParam := c.Params("name")
 	if appNameParam == "" {
@@ -96,7 +96,7 @@ func SetAppLocales(c *fiber.Ctx) error {
 
 	// Parse the request.
 	request := requests.SetAppLocale{}
-	if err := c.BodyParser(&request); err != nil {
+	if err := c.Bind().Body(&request); err != nil {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.BodyParse, err.Error())
 	}
 

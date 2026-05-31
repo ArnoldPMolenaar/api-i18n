@@ -8,11 +8,11 @@ import (
 	"api-i18n/main/src/utils"
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // GetTerritoryLookup func for getting territory lookup by locale ID, type and optional name filter.
-func GetTerritoryLookup(c *fiber.Ctx) error {
+func GetTerritoryLookup(c fiber.Ctx) error {
 	localeIDParam := c.Query("localeId")
 	if localeIDParam == "" {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "localeId query parameter is required.")

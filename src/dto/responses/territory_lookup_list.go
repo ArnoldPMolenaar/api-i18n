@@ -9,9 +9,9 @@ type TerritoryLookupList struct {
 // SetTerritoryLookupList sets the list of territory lookups.
 func (tll *TerritoryLookupList) SetTerritoryLookupList(territories *[]models.TerritoryName) {
 	tll.Territories = make([]TerritoryLookup, len(*territories))
-	for i, territory := range *territories {
+	for i := range *territories {
 		var tl TerritoryLookup
-		tl.SetTerritoryLookup(&territory)
+		tl.SetTerritoryLookup(&(*territories)[i])
 		tll.Territories[i] = tl
 	}
 }

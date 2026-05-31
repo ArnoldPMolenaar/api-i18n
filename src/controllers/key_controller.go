@@ -8,12 +8,12 @@ import (
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
 	util "github.com/ArnoldPMolenaar/api-utils/utils"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/samber/lo"
 )
 
 // GetKeys func for getting all keys paginated.
-func GetKeys(c *fiber.Ctx) error {
+func GetKeys(c fiber.Ctx) error {
 	paginationModel, err := services.GetKeys(c)
 	if err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
@@ -23,7 +23,7 @@ func GetKeys(c *fiber.Ctx) error {
 }
 
 // GetKeyByID func for getting a key by ID.
-func GetKeyByID(c *fiber.Ctx) error {
+func GetKeyByID(c fiber.Ctx) error {
 	keyIDParam := c.Params("id")
 	keyID, err := util.StringToUint(keyIDParam)
 	if err != nil {
@@ -44,12 +44,12 @@ func GetKeyByID(c *fiber.Ctx) error {
 }
 
 // CreateKey func for creating a key.
-func CreateKey(c *fiber.Ctx) error {
+func CreateKey(c fiber.Ctx) error {
 	// Create a new key struct for the request.
 	keyRequest := &requests.CreateKey{}
 
 	// Check, if received JSON data is parsed.
-	if err := c.BodyParser(keyRequest); err != nil {
+	if err := c.Bind().Body(keyRequest); err != nil {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.BodyParse, err.Error())
 	}
 
@@ -90,7 +90,7 @@ func CreateKey(c *fiber.Ctx) error {
 	}
 
 	// Create key.
-	key, err := services.CreateKey(*keyRequest)
+	key, err := services.CreateKey(keyRequest)
 	if err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
 	}
@@ -110,7 +110,7 @@ func CreateKey(c *fiber.Ctx) error {
 }
 
 // UpdateKey func for updating a key.
-func UpdateKey(c *fiber.Ctx) error {
+func UpdateKey(c fiber.Ctx) error {
 	// Get the keyID parameter from the URL.
 	keyIDParam := c.Params("id")
 	keyID, err := util.StringToUint(keyIDParam)
@@ -122,7 +122,7 @@ func UpdateKey(c *fiber.Ctx) error {
 	keyRequest := &requests.UpdateKey{}
 
 	// Check, if received JSON data is parsed.
-	if err := c.BodyParser(keyRequest); err != nil {
+	if err := c.Bind().Body(keyRequest); err != nil {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.BodyParse, err.Error())
 	}
 
@@ -148,7 +148,8 @@ func UpdateKey(c *fiber.Ctx) error {
 	for _, translation := range keyRequest.Translations {
 		translationMap[translation.LocaleID] = translation
 	}
-	for _, translation := range oldKey.Translations {
+	for i := range oldKey.Translations {
+		translation := &oldKey.Translations[i]
 		if _, exists := translationMap[translation.LocaleID]; exists {
 			if translationMap[translation.LocaleID].UpdatedAt.Unix() < translation.UpdatedAt.Unix() {
 				return errorutil.Response(c, fiber.StatusBadRequest, errorutil.OutOfSync, "One or more translations are out of sync.")
@@ -185,7 +186,7 @@ func UpdateKey(c *fiber.Ctx) error {
 	}
 
 	// Update key.
-	updatedKey, err := services.UpdateKey(*oldKey, *keyRequest)
+	updatedKey, err := services.UpdateKey(oldKey, keyRequest)
 	if err != nil {
 		return errorutil.Response(c, fiber.StatusInternalServerError, errorutil.QueryError, err.Error())
 	}
@@ -205,7 +206,7 @@ func UpdateKey(c *fiber.Ctx) error {
 }
 
 // DeleteKey func for deleting a key.
-func DeleteKey(c *fiber.Ctx) error {
+func DeleteKey(c fiber.Ctx) error {
 	// Get the ID from the URL.
 	id, err := util.StringToUint(c.Params("id"))
 	if err != nil {
@@ -229,7 +230,7 @@ func DeleteKey(c *fiber.Ctx) error {
 }
 
 // RestoreKey func for restoring a deleted Key.
-func RestoreKey(c *fiber.Ctx) error {
+func RestoreKey(c fiber.Ctx) error {
 	// Get the ID from the URL.
 	id, err := util.StringToUint(c.Params("id"))
 	if err != nil {

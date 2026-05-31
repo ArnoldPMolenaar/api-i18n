@@ -7,9 +7,10 @@ import (
 	"api-i18n/main/src/enums"
 	"api-i18n/main/src/models"
 	"database/sql"
+	"strconv"
 
 	"github.com/ArnoldPMolenaar/api-utils/pagination"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
 
@@ -29,9 +30,9 @@ func IsKeyAvailable(appName, keyName string, categoryID *uint, ignore *string) (
 
 	if result.Error != nil {
 		return false, result.Error
-	} else {
-		return result.RowsAffected == 0, nil
 	}
+
+	return result.RowsAffected == 0, nil
 }
 
 // IsKeyAvailableGlobal method to check if a key name is available globally (regardless of app or category).
@@ -47,9 +48,9 @@ func IsKeyAvailableGlobal(keyName string, ignore *string) (bool, error) {
 
 	if result.Error != nil {
 		return false, result.Error
-	} else {
-		return result.RowsAffected == 0, nil
 	}
+
+	return result.RowsAffected == 0, nil
 }
 
 // IsKeyDeleted method to check if a key is deleted.
@@ -70,8 +71,8 @@ func HasValidTranslations(appName string, localeIDs []string) (bool, error) {
 
 	// Build a set of IDs from locales.
 	localeIDSet := make(map[string]struct{})
-	for _, loc := range locales {
-		localeIDSet[loc.ID] = struct{}{}
+	for i := range locales {
+		localeIDSet[locales[i].ID] = struct{}{}
 	}
 
 	// Check that every localeID is in locales.
@@ -86,8 +87,8 @@ func HasValidTranslations(appName string, localeIDs []string) (bool, error) {
 	for _, id := range localeIDs {
 		localeIDsSet[id] = struct{}{}
 	}
-	for _, loc := range locales {
-		if _, exists := localeIDsSet[loc.ID]; !exists {
+	for i := range locales {
+		if _, exists := localeIDsSet[locales[i].ID]; !exists {
 			return false, nil
 		}
 	}
@@ -96,7 +97,7 @@ func HasValidTranslations(appName string, localeIDs []string) (bool, error) {
 }
 
 // GetKeys method to get paginated keys.
-func GetKeys(c *fiber.Ctx) (*pagination.Model, error) {
+func GetKeys(c fiber.Ctx) (*pagination.Model, error) {
 	keys := make([]models.Key, 0)
 	values := c.Request().URI().QueryArgs()
 	allowedColumns := map[string]bool{
@@ -112,11 +113,17 @@ func GetKeys(c *fiber.Ctx) (*pagination.Model, error) {
 
 	queryFunc := pagination.Query(values, allowedColumns)
 	sortFunc := pagination.Sort(values, allowedColumns)
-	page := c.QueryInt("page", 1)
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil {
+		page = 1
+	}
 	if page < 1 {
 		page = 1
 	}
-	limit := c.QueryInt("limit", 10)
+	limit, err := strconv.Atoi(c.Query("limit", "10"))
+	if err != nil {
+		limit = 10
+	}
 	if limit < 1 {
 		limit = 10
 	}
@@ -165,7 +172,7 @@ func GetKeyByID(keyID uint) (*models.Key, error) {
 }
 
 // CreateKey method to create a key.
-func CreateKey(keyDto requests.CreateKey) (*models.Key, error) {
+func CreateKey(keyDto *requests.CreateKey) (*models.Key, error) {
 	key := &models.Key{AppName: keyDto.AppName, Name: keyDto.Name}
 	if keyDto.CategoryID != nil {
 		key.CategoryID = sql.Null[uint]{V: *keyDto.CategoryID, Valid: true}
@@ -198,7 +205,7 @@ func CreateKey(keyDto requests.CreateKey) (*models.Key, error) {
 }
 
 // UpdateKey method to update a key.
-func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error) {
+func UpdateKey(oldKey *models.Key, keyDto *requests.UpdateKey) (*models.Key, error) {
 	oldKey.Name = keyDto.Name
 	if keyDto.CategoryID != nil {
 		oldKey.CategoryID = sql.Null[uint]{V: *keyDto.CategoryID, Valid: true}
@@ -235,7 +242,7 @@ func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error
 		}
 	}
 
-	if result := database.Pg.Session(&gorm.Session{FullSaveAssociations: true}).Save(&oldKey); result.Error != nil {
+	if result := database.Pg.Session(&gorm.Session{FullSaveAssociations: true}).Save(oldKey); result.Error != nil {
 		return nil, result.Error
 	}
 
@@ -243,7 +250,7 @@ func UpdateKey(oldKey models.Key, keyDto requests.UpdateKey) (*models.Key, error
 		_ = deleteTranslationFromCache(oldKey.AppName, oldKey.Translations[i].LocaleID)
 	}
 
-	return &oldKey, nil
+	return oldKey, nil
 }
 
 // DeleteKey method to delete a key.

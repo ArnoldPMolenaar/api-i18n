@@ -7,11 +7,11 @@ import (
 	"api-i18n/main/src/utils"
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // GetLocaleLookup func for getting locale lookup by locale ID, optional name filter.
-func GetLocaleLookup(c *fiber.Ctx) error {
+func GetLocaleLookup(c fiber.Ctx) error {
 	localeIDParam := c.Query("localeId")
 	if localeIDParam == "" {
 		return errorutil.Response(c, fiber.StatusBadRequest, errorutil.InvalidParam, "localeId query parameter is required.")

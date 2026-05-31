@@ -60,8 +60,8 @@ func SetAppLocales(app string, locales []string) error {
 	}
 
 	currentLocaleIDs := make([]string, len(currentLocales))
-	for i, lang := range currentLocales {
-		currentLocaleIDs[i] = lang.ID
+	for i := range currentLocales {
+		currentLocaleIDs[i] = currentLocales[i].ID
 	}
 
 	newLocales := make([]models.Locale, len(locales))
@@ -82,7 +82,8 @@ func SetAppLocales(app string, locales []string) error {
 	}
 
 	// Set new locales
-	for _, locale := range locales {
+	for i := range locales {
+		locale := locales[i]
 		if err := tx.Model(&a).Association("Locales").Append(&newLocales); err != nil {
 			tx.Rollback()
 			return err

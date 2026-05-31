@@ -6,11 +6,11 @@ import (
 	"api-i18n/main/src/utils"
 
 	errorutil "github.com/ArnoldPMolenaar/api-utils/errors"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // GetTranslationsByLocaleId func for getting translations by locale id.
-func GetTranslationsByLocaleId(c *fiber.Ctx) error {
+func GetTranslationsByLocaleId(c fiber.Ctx) error {
 	localeId := c.Params("localeId")
 	appName := c.Query("app")
 

@@ -1,7 +1,7 @@
 # 🌐 API I18n: Microservice to Manage Translations
 
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go)](https://go.dev/)
-[![Fiber](https://img.shields.io/badge/Fiber-v2-2C8EBB?logo=go)](https://github.com/gofiber/fiber)
+[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev/)
+[![Fiber](https://img.shields.io/badge/Fiber-v3-2C8EBB?logo=go)](https://github.com/gofiber/fiber)
 [![GORM](https://img.shields.io/badge/GORM-v1-7F52FF?logo=go)](https://gorm.io)
 [![Phone Libs](https://img.shields.io/badge/Phone%20Libs-libphonenumber%20%2F%20nyaruka-4CAF50)](https://github.com/nyaruka/phonenumbers)
 
@@ -66,24 +66,24 @@ Base: `/v1`
 - Apps
   - `POST /v1/apps/` — Create an app
   - `GET /v1/apps/:name/locales` — Get locales configured for an app
-  - `PUT /v1/apps/:name/locales` — Set locales for an app
+  - `PATCH /v1/apps/:name/locales` — Set locales for an app
 
 - Categories
   - `GET /v1/categories/` — List categories
   - `POST /v1/categories/` — Create category
   - `GET /v1/categories/lookup` — Lookup categories
   - `GET /v1/categories/:id` — Get category by ID
-  - `PUT /v1/categories/:id` — Update category by ID
+  - `PATCH /v1/categories/:id` — Update category by ID
   - `DELETE /v1/categories/:id` — Soft-delete category by ID
-  - `PUT /v1/categories/:id/restore` — Restore soft-deleted category
+  - `POST /v1/categories/:id/restore` — Restore soft-deleted category
 
 - Keys
   - `GET /v1/keys/` — List keys
   - `POST /v1/keys/` — Create key
   - `GET /v1/keys/:id` — Get key by ID
-  - `PUT /v1/keys/:id` — Update key by ID
+  - `PATCH /v1/keys/:id` — Update key by ID
   - `DELETE /v1/keys/:id` — Soft-delete key by ID
-  - `PUT /v1/keys/:id/restore` — Restore soft-deleted key
+  - `POST /v1/keys/:id/restore` — Restore soft-deleted key
 
 ### Public Routes
 Base: `/v1`
